@@ -111,9 +111,15 @@ class InstallController extends Controller
 
         try {
             $sql = file_get_contents($sqlFile);
-            $statements = array_filter(array_map('trim', explode(';', $sql)));
+            $statements = explode(';', $sql);
             foreach ($statements as $statement) {
-                if (!empty($statement) && !preg_match('/^--/', $statement)) {
+                // Strip comment lines, then check if anything executable remains
+                $lines = explode("\n", $statement);
+                $clean = array_filter($lines, function($line) {
+                    return strpos(trim($line), '--') !== 0;
+                });
+                $statement = trim(implode("\n", $clean));
+                if ($statement !== '') {
                     $db->exec($statement);
                 }
             }
