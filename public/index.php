@@ -4,6 +4,15 @@ declare(strict_types=1);
 define('ROOT_PATH', dirname(__DIR__));
 define('START_TIME', microtime(true));
 
+// When Apache uses FallbackResource (mod_rewrite not loaded) it sets REDIRECT_URL
+// to the original request path and may rewrite REQUEST_URI to index.php — restore it.
+if (!empty($_SERVER['REDIRECT_URL'])) {
+    $qs = !empty($_SERVER['REDIRECT_QUERY_STRING'])
+        ? '?' . $_SERVER['REDIRECT_QUERY_STRING']
+        : (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '');
+    $_SERVER['REQUEST_URI'] = $_SERVER['REDIRECT_URL'] . $qs;
+}
+
 // Auto-detect base path from the script's location (e.g. /teste/public)
 $_scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
 define('APP_BASE_PATH', rtrim($_scriptDir === '/' ? '' : $_scriptDir, '/'));

@@ -18,6 +18,12 @@ Options +FollowSymLinks -Indexes
     RewriteRule ^ index.php [QSA,L]
 </IfModule>
 
+# Fallback when mod_rewrite is not loaded (FallbackResource requires Apache 2.2.16+)
+# NOTE: update the path below if your installation folder changes
+<IfModule !mod_rewrite.c>
+    FallbackResource /teste/public/index.php
+</IfModule>
+
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options nosniff
     Header always set X-Frame-Options SAMEORIGIN
