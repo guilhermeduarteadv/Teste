@@ -72,7 +72,8 @@ class DocumentController extends Controller
         // Validate MIME type
         $finfo = new \finfo(FILEINFO_MIME_TYPE);
         $mimeType = $finfo->file($tmpPath);
-        $allowedMimesForExt = array_filter($this->allowedMimes, fn($ext) => $ext === $extension, ARRAY_FILTER_USE_KEY);
+        $ext = $extension;
+        $allowedMimesForExt = array_filter($this->allowedMimes, function($mime, $e) use ($ext) { return $e === $ext; }, ARRAY_FILTER_USE_BOTH);
         if (!in_array($mimeType, array_values($this->allowedMimes))) {
             Logger::security("Invalid MIME type upload attempt: {$mimeType}", ['file' => $originalName]);
             $this->json(['success' => false, 'message' => 'Tipo de arquivo inválido ou corrompido.']);

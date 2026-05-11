@@ -70,11 +70,14 @@ abstract class Model
     public function update(int $id, array $data): bool
     {
         $data['updated_at'] = date('Y-m-d H:i:s');
-        $sets = implode(', ', array_map(fn($col) => "{$col} = ?", array_keys($data)));
+        $cols = array_keys($data);
+        $sets = implode(', ', array_map(function($col) { return "{$col} = ?"; }, $cols));
         $stmt = $this->db->prepare(
             "UPDATE {$this->table} SET {$sets} WHERE {$this->primaryKey} = ?"
         );
-        return $stmt->execute([...array_values($data), $id]);
+        $params = array_values($data);
+        $params[] = $id;
+        return $stmt->execute($params);
     }
 
     public function softDelete(int $id): bool

@@ -260,7 +260,7 @@ class AdminController extends Controller
             'module'  => $this->input('module', ''),
             'user_id' => $this->input('user_id', ''),
         ];
-        $filters = array_filter($filters, fn($v) => $v !== '' && $v !== null);
+        $filters = array_filter($filters, function($v) { return $v !== '' && $v !== null; });
 
         $paginated = $this->logModel->getPaginated($page, 50, $filters);
         $users     = $this->userModel->findAll(['status' => 'active'], 'name ASC');
