@@ -7,12 +7,15 @@ abstract class Controller
 {
     protected function render(string $view, array $data = [], string $layout = 'main'): void
     {
+        $basePath = defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
+
         // Inject common template variables
         $data += [
             'csrf_token' => Session::csrfToken(),
             'error'      => Session::getFlash('error'),
             'success'    => Session::getFlash('success'),
             'old'        => Session::getFlash('old', []),
+            'basePath'   => $basePath,
         ];
         extract($data);
         $viewFile = ROOT_PATH . '/app/Views/' . str_replace('.', '/', $view) . '.php';
@@ -26,11 +29,29 @@ abstract class Controller
         require $viewFile;
         $content = ob_get_clean();
         $layoutFile = ROOT_PATH . '/app/Views/layouts/' . $layout . '.php';
+        ob_start();
         if (file_exists($layoutFile)) {
             require $layoutFile;
         } else {
             echo $content;
         }
+        $html = ob_get_clean();
+
+        // Rewrite absolute URL attributes for subdirectory deployment
+        if ($basePath !== '') {
+            $html = preg_replace_callback(
+                '#((?:href|action|src)=")(/(?!/)[^"]*)#',
+                function ($m) use ($basePath) {
+                    if (strpos($m[2], $basePath) === 0) {
+                        return $m[0];
+                    }
+                    return $m[1] . $basePath . $m[2];
+                },
+                $html
+            );
+        }
+
+        echo $html;
     }
 
     protected function json($data, int $code = 200): void

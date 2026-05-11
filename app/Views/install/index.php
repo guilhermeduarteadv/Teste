@@ -85,54 +85,73 @@ $csrf = \Core\Session::csrfToken();
 </div>
 
 <script>
-document.getElementById('testDbBtn')?.addEventListener('click', async function() {
-    const form = document.getElementById('installForm');
-    const btn = this;
-    const result = document.getElementById('db-test-result');
+var BASE = '<?= defined('APP_BASE_PATH') ? APP_BASE_PATH : '' ?>';
+
+document.getElementById('testDbBtn').addEventListener('click', function() {
+    var form = document.getElementById('installForm');
+    var btn = this;
+    var result = document.getElementById('db-test-result');
     btn.disabled = true;
     result.innerHTML = '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Testando...</span>';
 
-    const data = new FormData(form);
-    try {
-        const resp = await fetch('/install/test-db', { method: 'POST', body: data });
-        const json = await resp.json();
-        if (json.success) {
-            result.innerHTML = '<span class="text-success"><i class="fas fa-check me-1"></i>' + json.message + '</span>';
-        } else {
-            result.innerHTML = '<span class="text-danger"><i class="fas fa-times me-1"></i>' + json.message + '</span>';
+    var data = new FormData(form);
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', BASE + '/install/test-db');
+    xhr.onload = function() {
+        try {
+            var json = JSON.parse(xhr.responseText);
+            if (json.success) {
+                result.innerHTML = '<span class="text-success"><i class="fas fa-check me-1"></i>' + json.message + '</span>';
+            } else {
+                result.innerHTML = '<span class="text-danger"><i class="fas fa-times me-1"></i>' + json.message + '</span>';
+            }
+        } catch(e) {
+            result.innerHTML = '<span class="text-danger"><i class="fas fa-times me-1"></i>Resposta inválida do servidor.</span>';
         }
-    } catch(e) {
+        btn.disabled = false;
+    };
+    xhr.onerror = function() {
         result.innerHTML = '<span class="text-danger"><i class="fas fa-times me-1"></i>Erro na requisição.</span>';
-    }
-    btn.disabled = false;
+        btn.disabled = false;
+    };
+    xhr.send(data);
 });
 
-document.getElementById('installForm')?.addEventListener('submit', async function(e) {
+document.getElementById('installForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    const btn = document.getElementById('installBtn');
-    const alertArea = document.getElementById('alert-area');
+    var btn = document.getElementById('installBtn');
+    var alertArea = document.getElementById('alert-area');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Instalando...';
     alertArea.innerHTML = '';
 
-    const data = new FormData(this);
-    try {
-        const resp = await fetch('/install/run', { method: 'POST', body: data });
-        const json = await resp.json();
-        if (json.success) {
-            document.getElementById('step-1').style.display = 'none';
-            document.getElementById('step-success').style.display = 'block';
-            setTimeout(() => { window.location.href = json.redirect || '/login'; }, 3000);
-        } else {
-            let msgs = json.errors ? json.errors.join('<br>') : (json.message || 'Erro desconhecido.');
-            alertArea.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>' + msgs + '</div>';
+    var data = new FormData(this);
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', BASE + '/install/run');
+    xhr.onload = function() {
+        try {
+            var json = JSON.parse(xhr.responseText);
+            if (json.success) {
+                document.getElementById('step-1').style.display = 'none';
+                document.getElementById('step-success').style.display = 'block';
+                setTimeout(function() { window.location.href = BASE + (json.redirect || '/login'); }, 3000);
+            } else {
+                var msgs = json.errors ? json.errors.join('<br>') : (json.message || 'Erro desconhecido.');
+                alertArea.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>' + msgs + '</div>';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-rocket me-2"></i>Instalar Sistema';
+            }
+        } catch(e) {
+            alertArea.innerHTML = '<div class="alert alert-danger">Erro ao processar a requisição.</div>';
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-rocket me-2"></i>Instalar Sistema';
         }
-    } catch(e) {
+    };
+    xhr.onerror = function() {
         alertArea.innerHTML = '<div class="alert alert-danger">Erro ao processar a requisição.</div>';
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-rocket me-2"></i>Instalar Sistema';
-    }
+    };
+    xhr.send(data);
 });
 </script>
