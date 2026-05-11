@@ -37,17 +37,17 @@
 <div class="container portal-content">
     <ul class="nav nav-pills mb-4">
         <li class="nav-item">
-            <a class="nav-link <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/portal/cases') ? 'active' : '' ?>" href="/portal/cases">
+            <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'] ?? '', '/portal/cases') === 0 ? 'active' : '' ?>" href="/portal/cases">
                 <i class="fas fa-gavel me-1"></i>Processos
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/portal/financial') ? 'active' : '' ?>" href="/portal/financial">
+            <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'] ?? '', '/portal/financial') === 0 ? 'active' : '' ?>" href="/portal/financial">
                 <i class="fas fa-dollar-sign me-1"></i>Financeiro
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link <?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/portal/documents') ? 'active' : '' ?>" href="/portal/documents">
+            <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'] ?? '', '/portal/documents') === 0 ? 'active' : '' ?>" href="/portal/documents">
                 <i class="fas fa-folder me-1"></i>Documentos
             </a>
         </li>

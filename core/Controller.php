@@ -33,7 +33,7 @@ abstract class Controller
         }
     }
 
-    protected function json(mixed $data, int $code = 200): void
+    protected function json($data, int $code = 200): void
     {
         http_response_code($code);
         header('Content-Type: application/json; charset=utf-8');
@@ -44,7 +44,7 @@ abstract class Controller
     protected function redirect(string $url, int $code = 302): void
     {
         // Prepend base path for absolute internal URLs
-        if (str_starts_with($url, '/') && defined('APP_BASE_PATH') && APP_BASE_PATH !== '') {
+        if (strncmp($url, '/', 1) === 0 && defined('APP_BASE_PATH') && APP_BASE_PATH !== '') {
             $url = APP_BASE_PATH . $url;
         }
         http_response_code($code);
@@ -80,7 +80,7 @@ abstract class Controller
         }
     }
 
-    protected function input(string $key, mixed $default = null): mixed
+    protected function input(string $key, $default = null)
     {
         $value = $_POST[$key] ?? $_GET[$key] ?? $default;
         if (is_string($value)) {

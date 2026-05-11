@@ -9,14 +9,14 @@ class SettingModel extends Model
 {
     protected string $table = 'settings';
 
-    public function get(string $key, mixed $default = null): mixed
+    public function get(string $key, $default = null)
     {
         $row = $this->queryOne("SELECT valor, tipo FROM settings WHERE chave = ? LIMIT 1", [$key]);
         if (!$row) return $default;
         return $this->castValue($row['valor'], $row['tipo']);
     }
 
-    public function set(string $key, mixed $value): bool
+    public function set(string $key, $value): bool
     {
         $existing = $this->queryOne("SELECT id FROM settings WHERE chave = ? LIMIT 1", [$key]);
         if ($existing) {
@@ -58,15 +58,15 @@ class SettingModel extends Model
         return $settings;
     }
 
-    private function castValue(?string $value, string $tipo): mixed
+    private function castValue(?string $value, string $tipo)
     {
         if ($value === null) return null;
-        return match($tipo) {
-            'integer' => (int)$value,
-            'boolean' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
-            'json'    => json_decode($value, true),
-            default   => $value,
-        };
+        switch ($tipo) {
+            case 'integer': return (int)$value;
+            case 'boolean': return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+            case 'json':    return json_decode($value, true);
+            default:        return $value;
+        }
     }
 
     public function bulkUpdate(array $data): void

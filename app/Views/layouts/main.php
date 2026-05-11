@@ -91,7 +91,7 @@
 $currentUser = \Core\Session::get('user');
 $currentUri  = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $isActive = function(string $path) use ($currentUri): string {
-    return str_starts_with($currentUri, $path) ? 'active' : '';
+    return strpos($currentUri, $path) === 0 ? 'active' : '';
 };
 ?>
 <!-- Sidebar -->

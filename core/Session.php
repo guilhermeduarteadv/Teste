@@ -49,12 +49,12 @@ class Session
         $_SESSION['_last_regeneration'] = time();
     }
 
-    public static function set(string $key, mixed $value): void
+    public static function set(string $key, $value): void
     {
         $_SESSION[$key] = $value;
     }
 
-    public static function get(string $key, mixed $default = null): mixed
+    public static function get(string $key, $default = null)
     {
         return $_SESSION[$key] ?? $default;
     }
@@ -69,12 +69,12 @@ class Session
         unset($_SESSION[$key]);
     }
 
-    public static function flash(string $key, mixed $value): void
+    public static function flash(string $key, $value): void
     {
         $_SESSION['_flash'][$key] = $value;
     }
 
-    public static function getFlash(string $key, mixed $default = null): mixed
+    public static function getFlash(string $key, $default = null)
     {
         $value = $_SESSION['_flash'][$key] ?? $default;
         unset($_SESSION['_flash'][$key]);

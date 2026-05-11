@@ -14,27 +14,27 @@ class Router
         $this->basePath = rtrim($basePath, '/');
     }
 
-    public function get(string $path, array|callable $handler, array $middlewares = []): void
+    public function get(string $path, $handler, array $middlewares = []): void
     {
         $this->addRoute('GET', $path, $handler, $middlewares);
     }
 
-    public function post(string $path, array|callable $handler, array $middlewares = []): void
+    public function post(string $path, $handler, array $middlewares = []): void
     {
         $this->addRoute('POST', $path, $handler, $middlewares);
     }
 
-    public function put(string $path, array|callable $handler, array $middlewares = []): void
+    public function put(string $path, $handler, array $middlewares = []): void
     {
         $this->addRoute('PUT', $path, $handler, $middlewares);
     }
 
-    public function delete(string $path, array|callable $handler, array $middlewares = []): void
+    public function delete(string $path, $handler, array $middlewares = []): void
     {
         $this->addRoute('DELETE', $path, $handler, $middlewares);
     }
 
-    private function addRoute(string $method, string $path, array|callable $handler, array $middlewares): void
+    private function addRoute(string $method, string $path, $handler, array $middlewares): void
     {
         $this->routes[] = [
             'method'      => $method,
@@ -49,7 +49,7 @@ class Router
         $method = $_SERVER['REQUEST_METHOD'];
         $rawUri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
         // Strip base path prefix so routes are matched without it
-        if ($this->basePath !== '' && str_starts_with($rawUri, $this->basePath)) {
+        if ($this->basePath !== '' && strpos($rawUri, $this->basePath) === 0) {
             $rawUri = substr($rawUri, strlen($this->basePath));
         }
         $uri = '/' . trim($rawUri, '/');
@@ -62,7 +62,6 @@ class Router
             $pattern = $this->buildPattern($route['path']);
             if ($route['method'] === $method && preg_match($pattern, $uri, $matches)) {
                 array_shift($matches);
-                $params = array_values(array_filter($matches, fn($k) => !is_numeric($k), ARRAY_FILTER_USE_KEY));
                 $params = array_values(array_filter($matches));
 
                 foreach ($route['middlewares'] as $middleware) {
@@ -86,7 +85,7 @@ class Router
         return '#^' . $path . '$#';
     }
 
-    private function callHandler(array|callable $handler, array $params): void
+    private function callHandler($handler, array $params): void
     {
         if (is_callable($handler)) {
             call_user_func_array($handler, $params);
