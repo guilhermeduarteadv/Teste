@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
-declare(strict_types=1);
 
 define('ROOT_PATH', dirname(__DIR__));
 define('START_TIME', microtime(true));
