@@ -4,6 +4,11 @@ declare(strict_types=1);
 define('ROOT_PATH', dirname(__DIR__));
 define('START_TIME', microtime(true));
 
+// Auto-detect base path from the script's location (e.g. /teste/public)
+$_scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+define('APP_BASE_PATH', rtrim($_scriptDir === '/' ? '' : $_scriptDir, '/'));
+unset($_scriptDir);
+
 // Load environment variables
 if (file_exists(ROOT_PATH . '/.env')) {
     $lines = file(ROOT_PATH . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -31,8 +36,9 @@ if (APP_DEBUG) {
     error_reporting(E_ALL);
     ini_set('display_errors', '1');
 } else {
-    error_reporting(0);
+    error_reporting(E_ALL);
     ini_set('display_errors', '0');
+    ini_set('log_errors', '1');
 }
 
 // Timezone
@@ -85,24 +91,29 @@ Session::start([
     'lifetime' => (int)($_ENV['SESSION_LIFETIME'] ?? 120),
 ]);
 
+// Strip base path to get the logical URI for route matching
+$requestUri  = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$basePath    = APP_BASE_PATH;
+$currentUri  = $basePath !== ''
+    ? '/' . trim(substr($requestUri, strlen($basePath)), '/')
+    : '/' . trim($requestUri, '/');
+if ($currentUri === '') $currentUri = '/';
+
 // Check installation
 $installedLock = ROOT_PATH . '/storage/installed.lock';
-$currentUri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-$currentUri = '/' . trim($currentUri, '/');
-
 $installRoutes = ['/install', '/install/run', '/install/test-db'];
 
 if (!file_exists($installedLock) && !in_array($currentUri, $installRoutes)) {
-    header('Location: /install');
+    header('Location: ' . $basePath . '/install');
     exit;
 }
 
 if (file_exists($installedLock) && in_array($currentUri, $installRoutes)) {
-    header('Location: /login');
+    header('Location: ' . $basePath . '/login');
     exit;
 }
 
-// Load routes
-$router = new Router();
+// Load routes and dispatch (pass base path so router prepends it)
+$router = new Router($basePath);
 require ROOT_PATH . '/routes.php';
 $router->dispatch();

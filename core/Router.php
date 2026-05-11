@@ -38,7 +38,7 @@ class Router
     {
         $this->routes[] = [
             'method'      => $method,
-            'path'        => $this->basePath . $path,
+            'path'        => $path,  // base path is stripped at dispatch time
             'handler'     => $handler,
             'middlewares' => $middlewares,
         ];
@@ -47,8 +47,12 @@ class Router
     public function dispatch(): void
     {
         $method = $_SERVER['REQUEST_METHOD'];
-        $uri    = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        $uri    = '/' . trim($uri, '/');
+        $rawUri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+        // Strip base path prefix so routes are matched without it
+        if ($this->basePath !== '' && str_starts_with($rawUri, $this->basePath)) {
+            $rawUri = substr($rawUri, strlen($this->basePath));
+        }
+        $uri = '/' . trim($rawUri, '/');
 
         if ($method === 'POST' && isset($_POST['_method'])) {
             $method = strtoupper($_POST['_method']);

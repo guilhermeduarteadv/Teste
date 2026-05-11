@@ -43,6 +43,10 @@ abstract class Controller
 
     protected function redirect(string $url, int $code = 302): void
     {
+        // Prepend base path for absolute internal URLs
+        if (str_starts_with($url, '/') && defined('APP_BASE_PATH') && APP_BASE_PATH !== '') {
+            $url = APP_BASE_PATH . $url;
+        }
         http_response_code($code);
         header('Location: ' . $url);
         exit;

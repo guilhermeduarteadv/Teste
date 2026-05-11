@@ -1,22 +1,26 @@
-Options -Indexes
-RewriteEngine On
+Options +FollowSymLinks -Indexes
 
 # Block access to sensitive files
-<FilesMatch "\.(env|lock|log|sql|json|md|gitignore)$">
+<FilesMatch "\.(env|lock|log|sql|md|gitignore)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
 
-# Block access to directories
-RewriteRule ^(app|config|core|database|storage|logs)/ - [F,L]
+<IfModule mod_rewrite.c>
+    RewriteEngine On
 
-# Route all requests through index.php
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ index.php [QSA,L]
+    # Block access to app internals
+    RewriteRule ^(app|config|core|database|storage|logs)/ - [F,L]
 
-# Security headers
-Header always set X-Content-Type-Options nosniff
-Header always set X-Frame-Options SAMEORIGIN
-Header always set X-XSS-Protection "1; mode=block"
-Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    # Route everything through index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options SAMEORIGIN
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

@@ -15,14 +15,20 @@ class Session
         $name = $config['name'] ?? 'juriscontrol_session';
         $lifetime = $config['lifetime'] ?? 120;
         session_name($name);
-        session_set_cookie_params([
-            'lifetime' => $lifetime * 60,
-            'path'     => '/',
-            'domain'   => '',
-            'secure'   => isset($_SERVER['HTTPS']),
-            'httponly' => true,
-            'samesite' => 'Strict',
-        ]);
+        // samesite in array form requires PHP 7.3+; use ini_set for compatibility
+        $cookiePath = (defined('APP_BASE_PATH') && APP_BASE_PATH !== '') ? APP_BASE_PATH . '/' : '/';
+        if (PHP_VERSION_ID >= 70300) {
+            session_set_cookie_params([
+                'lifetime' => $lifetime * 60,
+                'path'     => $cookiePath,
+                'domain'   => '',
+                'secure'   => isset($_SERVER['HTTPS']),
+                'httponly' => true,
+                'samesite' => 'Lax',
+            ]);
+        } else {
+            session_set_cookie_params($lifetime * 60, $cookiePath, '', isset($_SERVER['HTTPS']), true);
+        }
         session_start();
         self::$started = true;
         self::regenerateIfNeeded();
