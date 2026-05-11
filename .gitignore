@@ -1,0 +1,6 @@
+.env
+/storage/documents/
+/storage/installed.lock
+/storage/logo.*
+/logs/*.log
+/vendor/
