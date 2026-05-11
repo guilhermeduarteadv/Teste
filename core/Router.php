@@ -87,7 +87,8 @@ class Router
 
     private function callHandler($handler, array $params): void
     {
-        if (is_callable($handler)) {
+        // Closures/functions go directly; arrays ['Class','method'] always instantiate
+        if (!is_array($handler) && is_callable($handler)) {
             call_user_func_array($handler, $params);
             return;
         }
