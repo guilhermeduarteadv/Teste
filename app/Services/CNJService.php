@@ -9,10 +9,10 @@ use PDO;
 
 class CNJService
 {
-    private string $baseUrl;
-    private string $apiKey;
-    private int $timeout;
-    private array $logs = [];
+    private $baseUrl;
+    private $apiKey;
+    private $timeout;
+    private $logs = [];
 
     public function __construct()
     {

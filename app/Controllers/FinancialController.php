@@ -14,7 +14,7 @@ use App\Helpers\ValidationHelper;
 
 class FinancialController extends Controller
 {
-    private FinancialEntry $model;
+    private $model;
 
     public function __construct()
     {

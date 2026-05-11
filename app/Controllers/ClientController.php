@@ -13,7 +13,7 @@ use App\Helpers\ValidationHelper;
 
 class ClientController extends Controller
 {
-    private Client $model;
+    private $model;
 
     public function __construct()
     {

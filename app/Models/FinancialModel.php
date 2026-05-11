@@ -7,7 +7,7 @@ use Core\Model;
 
 class FinancialModel extends Model
 {
-    protected string $table = 'financial_entries';
+    protected $table = 'financial_entries';
 
     public function search(array $filters = [], int $page = 1, int $perPage = 20): array
     {

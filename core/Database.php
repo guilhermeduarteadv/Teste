@@ -8,8 +8,8 @@ use PDOException;
 
 class Database
 {
-    private static ?PDO $instance = null;
-    private static array $config = [];
+    private static $instance = null;
+    private static $config = [];
 
     public static function getInstance(): PDO
     {

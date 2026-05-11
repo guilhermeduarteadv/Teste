@@ -7,7 +7,7 @@ use Core\Model;
 
 class Task extends Model
 {
-    protected string $table = 'tasks';
+    protected $table = 'tasks';
 
     public function findAllPaginated(int $page, int $perPage, array $filters = []): array
     {

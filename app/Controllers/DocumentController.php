@@ -12,9 +12,9 @@ use App\Helpers\SecurityHelper;
 
 class DocumentController extends Controller
 {
-    private Document $model;
-    private array $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
-    private array $allowedMimes = [
+    private $model;
+    private $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
+    private $allowedMimes = [
         'pdf'  => 'application/pdf',
         'jpg'  => 'image/jpeg',
         'jpeg' => 'image/jpeg',

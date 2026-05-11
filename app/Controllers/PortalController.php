@@ -13,10 +13,10 @@ use App\Models\DocumentModel;
 
 class PortalController extends Controller
 {
-    private ClientModel $clientModel;
-    private CaseModel $caseModel;
-    private FinancialModel $financialModel;
-    private DocumentModel $documentModel;
+    private $clientModel;
+    private $caseModel;
+    private $financialModel;
+    private $documentModel;
 
     public function __construct()
     {

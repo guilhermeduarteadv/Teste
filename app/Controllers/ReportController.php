@@ -10,7 +10,7 @@ use PDO;
 
 class ReportController extends Controller
 {
-    private \PDO $db;
+    private $db;
 
     public function __construct()
     {

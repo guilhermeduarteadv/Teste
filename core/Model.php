@@ -7,9 +7,9 @@ use PDO;
 
 abstract class Model
 {
-    protected PDO $db;
-    protected string $table = '';
-    protected string $primaryKey = 'id';
+    protected $db;
+    protected $table = '';
+    protected $primaryKey = 'id';
 
     public function __construct()
     {

@@ -5,8 +5,8 @@ namespace App\Helpers;
 
 class ValidationHelper
 {
-    private array $errors = [];
-    private array $data = [];
+    private $errors = [];
+    private $data = [];
 
     public function __construct(array $data)
     {

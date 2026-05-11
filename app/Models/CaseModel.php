@@ -7,7 +7,7 @@ use Core\Model;
 
 class CaseModel extends Model
 {
-    protected string $table = 'cases';
+    protected $table = 'cases';
 
     public function search(string $term, array $filters = [], int $page = 1, int $perPage = 20): array
     {

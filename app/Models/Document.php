@@ -7,7 +7,7 @@ use Core\Model;
 
 class Document extends Model
 {
-    protected string $table = 'documents';
+    protected $table = 'documents';
 
     public function findForEntity(string $entityType, int $entityId, bool $visibleOnly = false): array
     {

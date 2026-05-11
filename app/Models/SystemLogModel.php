@@ -7,7 +7,7 @@ use Core\Model;
 
 class SystemLogModel extends Model
 {
-    protected string $table = 'system_logs';
+    protected $table = 'system_logs';
 
     public function log(
         ?int $userId,

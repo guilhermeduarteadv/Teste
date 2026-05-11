@@ -15,9 +15,9 @@ use App\Helpers\ValidationHelper;
 
 class AdminController extends Controller
 {
-    private UserModel $userModel;
-    private SettingModel $settingModel;
-    private SystemLogModel $logModel;
+    private $userModel;
+    private $settingModel;
+    private $logModel;
 
     public function __construct()
     {

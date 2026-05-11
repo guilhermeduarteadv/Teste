@@ -8,8 +8,8 @@ use Core\Logger;
 
 class RateLimitMiddleware
 {
-    private int $maxAttempts;
-    private int $windowSeconds;
+    private $maxAttempts;
+    private $windowSeconds;
 
     public function __construct(int $maxAttempts = 60, int $windowSeconds = 60)
     {

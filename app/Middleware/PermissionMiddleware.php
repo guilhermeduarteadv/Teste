@@ -8,7 +8,7 @@ use Core\Logger;
 
 class PermissionMiddleware
 {
-    private string $permission;
+    private $permission;
 
     public function __construct(string $permission)
     {

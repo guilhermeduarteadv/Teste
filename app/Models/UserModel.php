@@ -7,7 +7,7 @@ use Core\Model;
 
 class UserModel extends Model
 {
-    protected string $table = 'users';
+    protected $table = 'users';
 
     public function findByEmail(string $email): ?array
     {

@@ -8,7 +8,7 @@ use PDO;
 
 class DateHelper
 {
-    private static array $holidays = [];
+    private static $holidays = [];
 
     public static function formatBr(string $date): string
     {

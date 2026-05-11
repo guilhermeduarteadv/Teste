@@ -5,7 +5,7 @@ namespace Core;
 
 class Session
 {
-    private static bool $started = false;
+    private static $started = false;
 
     public static function start(array $config = []): void
     {

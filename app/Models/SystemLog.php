@@ -7,7 +7,7 @@ use Core\Model;
 
 class SystemLog extends Model
 {
-    protected string $table = 'system_logs';
+    protected $table = 'system_logs';
 
     public function findPaginated(int $page, int $perPage, array $filters = []): array
     {

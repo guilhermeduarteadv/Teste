@@ -7,7 +7,7 @@ use Core\Model;
 
 class TaskModel extends Model
 {
-    protected string $table = 'tasks';
+    protected $table = 'tasks';
 
     public function search(array $filters = [], int $page = 1, int $perPage = 20): array
     {

@@ -5,9 +5,9 @@ namespace Core;
 
 class Router
 {
-    private array $routes = [];
-    private array $middlewares = [];
-    private string $basePath = '';
+    private $routes = [];
+    private $middlewares = [];
+    private $basePath = '';
 
     public function __construct(string $basePath = '')
     {

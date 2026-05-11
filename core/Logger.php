@@ -5,7 +5,7 @@ namespace Core;
 
 class Logger
 {
-    private static string $logPath = '';
+    private static $logPath = '';
 
     public static function init(string $logPath): void
     {

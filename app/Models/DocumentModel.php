@@ -7,7 +7,7 @@ use Core\Model;
 
 class DocumentModel extends Model
 {
-    protected string $table = 'documents';
+    protected $table = 'documents';
 
     public function getByEntity(string $entityType, int $entityId, bool $visibleOnly = false): array
     {

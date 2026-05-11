@@ -7,7 +7,7 @@ use Core\Model;
 
 class FinancialEntry extends Model
 {
-    protected string $table = 'financial_entries';
+    protected $table = 'financial_entries';
 
     public function findAllPaginated(int $page, int $perPage, array $filters = []): array
     {

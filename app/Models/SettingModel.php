@@ -7,7 +7,7 @@ use Core\Model;
 
 class SettingModel extends Model
 {
-    protected string $table = 'settings';
+    protected $table = 'settings';
 
     public function get(string $key, $default = null)
     {

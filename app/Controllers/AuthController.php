@@ -11,7 +11,7 @@ use App\Helpers\SecurityHelper;
 
 class AuthController extends Controller
 {
-    private AuthService $authService;
+    private $authService;
 
     public function __construct()
     {

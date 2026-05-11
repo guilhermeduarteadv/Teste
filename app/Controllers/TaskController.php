@@ -14,7 +14,7 @@ use App\Helpers\ValidationHelper;
 
 class TaskController extends Controller
 {
-    private Task $model;
+    private $model;
 
     public function __construct()
     {

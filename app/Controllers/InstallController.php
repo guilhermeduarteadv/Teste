@@ -11,7 +11,7 @@ use PDO;
 
 class InstallController extends Controller
 {
-    private string $lockFile;
+    private $lockFile;
 
     public function __construct()
     {

@@ -7,7 +7,7 @@ use Core\Model;
 
 class Permission extends Model
 {
-    protected string $table = 'permissions';
+    protected $table = 'permissions';
 
     public function getGroupedByModule(): array
     {

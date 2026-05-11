@@ -11,7 +11,7 @@ use PDO;
 
 class AuthService
 {
-    private PDO $db;
+    private $db;
 
     public function __construct()
     {

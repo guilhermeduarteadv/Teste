@@ -7,7 +7,7 @@ use Core\Model;
 
 class ClientModel extends Model
 {
-    protected string $table = 'clients';
+    protected $table = 'clients';
 
     public function search(string $term, int $page = 1, int $perPage = 20): array
     {

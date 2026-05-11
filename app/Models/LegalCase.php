@@ -7,7 +7,7 @@ use Core\Model;
 
 class LegalCase extends Model
 {
-    protected string $table = 'cases';
+    protected $table = 'cases';
 
     public function findAllPaginated(int $page, int $perPage, array $filters = []): array
     {

@@ -10,7 +10,7 @@ use PDO;
 
 class User extends Model
 {
-    protected string $table = 'users';
+    protected $table = 'users';
 
     public function findByEmail(string $email): ?array
     {

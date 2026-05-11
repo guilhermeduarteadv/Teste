@@ -16,7 +16,7 @@ use App\Helpers\ValidationHelper;
 
 class CaseController extends Controller
 {
-    private LegalCase $model;
+    private $model;
 
     public function __construct()
     {
