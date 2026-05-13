@@ -11,7 +11,13 @@ use App\Helpers\DateHelper;
             <li class="breadcrumb-item active"><?= htmlspecialchars($client['name'], ENT_QUOTES, 'UTF-8') ?></li>
         </ol></nav>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="/clients/<?= $client['id'] ?>/timeline" class="btn btn-sm btn-outline-info">
+            <i class="fas fa-history me-1"></i>Timeline
+        </a>
+        <a href="/clients/<?= $client['id'] ?>/notes" class="btn btn-sm btn-outline-warning">
+            <i class="fas fa-sticky-note me-1"></i>Anotações
+        </a>
         <a href="/clients/<?= $client['id'] ?>/edit" class="btn btn-sm btn-outline-primary">
             <i class="fas fa-edit me-1"></i>Editar
         </a>

@@ -394,11 +394,84 @@ class PortalController extends Controller
             $requests = [];
         }
 
+        // Load replies (portal_messages) keyed by request id
+        $replies = [];
+        try {
+            if (!empty($requests)) {
+                $ids = array_map(function ($r) { return (int)$r['id']; }, $requests);
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $stmtR = $db->prepare(
+                    "SELECT pm.* FROM portal_messages pm
+                     WHERE pm.client_id = ? AND pm.deleted_at IS NULL
+                     ORDER BY pm.created_at ASC"
+                );
+                $stmtR->execute([(int)$client['id']]);
+                $allMsgs = $stmtR->fetchAll(\PDO::FETCH_ASSOC);
+                foreach ($allMsgs as $msg) {
+                    $replies[] = $msg;
+                }
+            }
+        } catch (\Throwable $e) {
+            $replies = [];
+        }
+
         $this->render('portal/client_requests', [
-            'title' => 'Pendências - Portal do Cliente',
-            'client' => $client,
+            'title'    => 'Pendências - Portal do Cliente',
+            'client'   => $client,
             'requests' => $requests,
+            'replies'  => $replies,
+            'csrf_token' => Session::csrfToken(),
         ], 'portal');
+    }
+
+    public function replyRequest(string $id): void
+    {
+        $client = $this->requirePortalAuth();
+        $this->validateCsrf();
+
+        $requestId = (int)$id;
+        $message   = trim($_POST['message'] ?? '');
+        $subject   = trim($_POST['subject'] ?? 'Resposta à pendência #' . $requestId);
+
+        if ($message === '') {
+            Session::flash('error', 'A mensagem não pode estar vazia.');
+            $this->redirect('/portal/requests');
+            return;
+        }
+
+        $db = Database::getInstance();
+
+        // Verify request belongs to this client
+        try {
+            $stmt = $db->prepare(
+                "SELECT id FROM client_requests WHERE id = ? AND client_id = ? AND visible_client = 1 LIMIT 1"
+            );
+            $stmt->execute([$requestId, (int)$client['id']]);
+            if (!$stmt->fetch()) {
+                Session::flash('error', 'Pendência não encontrada.');
+                $this->redirect('/portal/requests');
+                return;
+            }
+        } catch (\Throwable $e) {
+            Session::flash('error', 'Erro ao verificar pendência.');
+            $this->redirect('/portal/requests');
+            return;
+        }
+
+        try {
+            $stmt = $db->prepare(
+                "INSERT INTO portal_messages (client_id, subject, message, sender_type, sender_id, created_at)
+                 VALUES (?, ?, ?, 'client', ?, NOW())"
+            );
+            $stmt->execute([(int)$client['id'], $subject, $message, (int)$client['id']]);
+        } catch (\Throwable $e) {
+            Session::flash('error', 'Erro ao enviar mensagem.');
+            $this->redirect('/portal/requests');
+            return;
+        }
+
+        Session::flash('success', 'Mensagem enviada com sucesso.');
+        $this->redirect('/portal/requests');
     }
 
 }

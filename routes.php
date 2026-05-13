@@ -29,6 +29,15 @@ use App\Controllers\MaintenanceController;
 use App\Controllers\OfficeModuleController;
 use App\Controllers\SystemCheckController;
 use App\Controllers\NotificationController;
+use App\Controllers\EvidenceController;
+use App\Controllers\CaseStrategyController;
+use App\Controllers\DeadlineController;
+use App\Controllers\KnowledgeController;
+use App\Controllers\ChecklistController;
+use App\Controllers\ProductivityController;
+use App\Controllers\AuditController;
+use App\Controllers\CasePartiesController;
+use App\Controllers\FinancialRepasesController;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\PermissionMiddleware;
 
@@ -64,6 +73,12 @@ $router->post('/clients/{id}/delete', [ClientController::class, 'delete'], [Auth
 $router->get('/clients/{id}/portal-access', [ClientController::class, 'togglePortalAccess'], [AuthMiddleware::class]);
 $router->get('/api/cep/{cep}', [ClientController::class, 'searchCep']);
 
+// Timeline do cliente (2.3)
+$router->get('/clients/{id}/timeline', [ClientController::class, 'timeline'], [AuthMiddleware::class]);
+$router->post('/clients/{id}/timeline/store', [ClientController::class, 'storeTimelineEvent'], [AuthMiddleware::class]);
+$router->get('/clients/{id}/notes', [ClientController::class, 'notes'], [AuthMiddleware::class]);
+$router->post('/clients/{id}/notes/store', [ClientController::class, 'storeNote'], [AuthMiddleware::class]);
+
 // Cases
 $router->get('/cases', [CaseController::class, 'index'], [AuthMiddleware::class]);
 $router->get('/cases/create', [CaseController::class, 'create'], [AuthMiddleware::class]);
@@ -81,7 +96,22 @@ $router->post('/cases/{id}/hearings/add', [CaseController::class, 'addHearing'],
 $router->post('/cases/{id}/contacts/add', [CaseController::class, 'addContact'], [AuthMiddleware::class]);
 $router->post('/cases/{id}/witnesses/add', [CaseController::class, 'addWitness'], [AuthMiddleware::class]);
 
+// Provas (2.11)
+$router->get('/cases/{id}/evidence', [EvidenceController::class, 'index'], [AuthMiddleware::class]);
+$router->post('/cases/{id}/evidence/store', [EvidenceController::class, 'store'], [AuthMiddleware::class]);
+$router->get('/evidence/{id}/edit', [EvidenceController::class, 'edit'], [AuthMiddleware::class]);
+$router->post('/evidence/{id}/update', [EvidenceController::class, 'update'], [AuthMiddleware::class]);
+$router->post('/evidence/{id}/delete', [EvidenceController::class, 'delete'], [AuthMiddleware::class]);
 
+// Estratégia Processual (2.12)
+$router->get('/cases/{id}/strategy', [CaseStrategyController::class, 'show'], [AuthMiddleware::class]);
+$router->post('/cases/{id}/strategy/save', [CaseStrategyController::class, 'save'], [AuthMiddleware::class]);
+
+// v36 Timeline processual
+$router->get('/cases/{id}/timeline', [TimelineController::class, 'caseTimeline'], [AuthMiddleware::class]);
+$router->post('/cases/{id}/timeline/rebuild', [TimelineController::class, 'rebuild'], [AuthMiddleware::class]);
+$router->post('/timeline/{id}/important', [TimelineController::class, 'markImportant'], [AuthMiddleware::class]);
+$router->get('/api/cases/{id}/timeline', [TimelineController::class, 'apiCaseTimeline'], [AuthMiddleware::class]);
 
 // Processos administrativos / Prefeitura
 $router->get('/administrative-procedures', [AdministrativeProcedureController::class, 'index'], [AuthMiddleware::class]);
@@ -104,6 +134,7 @@ $router->post('/consultancies/{id}/delete', [LegalConsultancyController::class, 
 // Estatísticas completas do escritório
 $router->get('/stats', [OfficeStatsController::class, 'index'], [AuthMiddleware::class]);
 $router->get('/api/office-stats', [OfficeStatsController::class, 'api'], [AuthMiddleware::class]);
+$router->get('/api/stats/dashboard', [StatsController::class, 'dashboard'], [AuthMiddleware::class]);
 
 // Financial
 $router->get('/financial', [FinancialController::class, 'index'], [AuthMiddleware::class]);
@@ -136,35 +167,48 @@ $router->get('/timesheets', [TimesheetController::class, 'index'], [AuthMiddlewa
 $router->post('/timesheets/store', [TimesheetController::class, 'store'], [AuthMiddleware::class]);
 $router->post('/timesheets/{id}/delete', [TimesheetController::class, 'delete'], [AuthMiddleware::class]);
 
-
 // Tribunal connections
 $router->get('/tribunals', [TribunalConnectionController::class, 'index'], [AuthMiddleware::class]);
 $router->post('/tribunals/store', [TribunalConnectionController::class, 'store'], [AuthMiddleware::class]);
 $router->post('/tribunals/{id}/test', [TribunalConnectionController::class, 'test'], [AuthMiddleware::class]);
 $router->post('/tribunals/{id}/delete', [TribunalConnectionController::class, 'delete'], [AuthMiddleware::class]);
 
-// Publications
+// Publications (2.6)
 $router->get('/publications', [PublicationController::class, 'index'], [AuthMiddleware::class]);
 $router->post('/publications/import', [PublicationController::class, 'importManual'], [AuthMiddleware::class]);
 $router->post('/publications/read-dje', [PublicationController::class, 'readDje'], [AuthMiddleware::class]);
 $router->post('/publications/read-text', [PublicationController::class, 'readText'], [AuthMiddleware::class]);
+$router->get('/publications/{id}', [PublicationController::class, 'show'], [AuthMiddleware::class]);
+$router->post('/publications/{id}/link-case', [PublicationController::class, 'linkCase'], [AuthMiddleware::class]);
+$router->post('/publications/{id}/create-deadline', [PublicationController::class, 'createDeadline'], [AuthMiddleware::class]);
+$router->post('/publications/{id}/status', [PublicationController::class, 'updateStatus'], [AuthMiddleware::class]);
 
 // Calendar
 $router->get('/calendar', [CalendarController::class, 'index'], [AuthMiddleware::class]);
 $router->get('/calendar/events', [CalendarController::class, 'events'], [AuthMiddleware::class]);
 $router->get('/calendar/debug', [CalendarController::class, 'debug'], [AuthMiddleware::class]);
-
+$router->post('/calendar/events/store', [CalendarController::class, 'store'], [AuthMiddleware::class]);
+$router->post('/calendar/events/{id}/update', [CalendarController::class, 'update'], [AuthMiddleware::class]);
+$router->post('/calendar/events/{id}/delete', [CalendarController::class, 'delete'], [AuthMiddleware::class]);
 
 // Diagnóstico, backups e modelos
 $router->get('/diagnostics', [DiagnosticController::class, 'index'], [AuthMiddleware::class]);
 $router->get('/backups', [BackupController::class, 'index'], [AuthMiddleware::class]);
 $router->post('/backups/create', [BackupController::class, 'create'], [AuthMiddleware::class]);
 $router->get('/backups/{id}/download', [BackupController::class, 'download'], [AuthMiddleware::class]);
+
+// Templates — complemento (2.2)
 $router->get('/templates', [TemplateController::class, 'index'], [AuthMiddleware::class]);
 $router->post('/templates/store', [TemplateController::class, 'store'], [AuthMiddleware::class]);
+$router->get('/templates/create', [TemplateController::class, 'create'], [AuthMiddleware::class]);
+$router->get('/templates/{id}/edit', [TemplateController::class, 'edit'], [AuthMiddleware::class]);
+$router->get('/templates/{id}/generate-form', [TemplateController::class, 'generateForm'], [AuthMiddleware::class]);
+$router->post('/templates/{id}/update', [TemplateController::class, 'update'], [AuthMiddleware::class]);
+$router->post('/templates/{id}/generate', [TemplateController::class, 'generate'], [AuthMiddleware::class]);
 $router->post('/templates/{id}/delete', [TemplateController::class, 'delete'], [AuthMiddleware::class]);
+$router->get('/generated-documents', [TemplateController::class, 'generated'], [AuthMiddleware::class]);
 
-// Reports
+// Reports (2.13)
 $router->get('/reports', [ReportController::class, 'index'], [AuthMiddleware::class]);
 $router->get('/reports/cases', [ReportController::class, 'cases'], [AuthMiddleware::class]);
 $router->get('/reports/financial', [ReportController::class, 'financial'], [AuthMiddleware::class]);
@@ -172,6 +216,10 @@ $router->get('/reports/clients', [ReportController::class, 'clients'], [AuthMidd
 $router->get('/reports/tasks', [ReportController::class, 'tasks'], [AuthMiddleware::class]);
 $router->get('/reports/export/pdf', [ReportController::class, 'exportPdf'], [AuthMiddleware::class]);
 $router->get('/reports/export/excel', [ReportController::class, 'exportExcel'], [AuthMiddleware::class]);
+$router->get('/reports/case/{id}/client', [ReportController::class, 'generateCaseClient'], [AuthMiddleware::class]);
+$router->get('/reports/case/{id}/internal', [ReportController::class, 'generateCaseInternal'], [AuthMiddleware::class]);
+$router->get('/reports/financial/generate', [ReportController::class, 'generateFinancialPdf'], [AuthMiddleware::class]);
+$router->get('/reports/generated', [ReportController::class, 'generatedList'], [AuthMiddleware::class]);
 
 // System Check
 $router->get('/admin/system-check', [SystemCheckController::class, 'index'], [AuthMiddleware::class]);
@@ -199,6 +247,11 @@ $router->get('/admin/tribunals', [AdminController::class, 'tribunals'], [AuthMid
 $router->post('/admin/tribunals/update', [AdminController::class, 'updateTribunals'], [AuthMiddleware::class]);
 $router->post('/admin/settings/update', [AdminController::class, 'updateSettings'], [AuthMiddleware::class]);
 
+// Auditoria (2.16)
+$router->get('/admin/audit', [AuditController::class, 'index'], [AuthMiddleware::class]);
+$router->get('/admin/audit/export', [AuditController::class, 'export'], [AuthMiddleware::class]);
+$router->get('/clients/{id}/export-data', [AuditController::class, 'exportClientData'], [AuthMiddleware::class]);
+
 // Portal do cliente
 $router->get('/portal', [PortalController::class, 'index']);
 $router->get('/portal/login', [PortalController::class, 'showLogin']);
@@ -209,6 +262,7 @@ $router->get('/portal/cases', [PortalController::class, 'cases']);
 $router->get('/portal/financial', [PortalController::class, 'financial']);
 $router->get('/portal/documents', [PortalController::class, 'documents']);
 $router->get('/portal/requests', [PortalController::class, 'clientRequestsPortal']);
+$router->post('/portal/requests/{id}/reply', [PortalController::class, 'replyRequest'], [AuthMiddleware::class]);
 $router->post('/portal/documents/upload', [PortalController::class, 'uploadDocument']);
 $router->get('/portal/documents/{id}/download', [PortalController::class, 'downloadDocument']);
 
@@ -217,16 +271,6 @@ $router->post('/api/cnj/sync', [ApiController::class, 'syncCnj'], [AuthMiddlewar
 $router->post('/api/processes/sync-registered', [ApiController::class, 'syncRegisteredProcesses'], [AuthMiddleware::class]);
 $router->get('/api/cnj/status', [ApiController::class, 'status'], [AuthMiddleware::class]);
 $router->post('/api/deadlines/calculate', [ApiController::class, 'calculateDeadline'], [AuthMiddleware::class]);
-
-
-// v36 Timeline processual e estatísticas
-$router->get('/cases/{id}/timeline', [TimelineController::class, 'caseTimeline'], [AuthMiddleware::class]);
-$router->post('/cases/{id}/timeline/rebuild', [TimelineController::class, 'rebuild'], [AuthMiddleware::class]);
-$router->post('/timeline/{id}/important', [TimelineController::class, 'markImportant'], [AuthMiddleware::class]);
-$router->get('/api/cases/{id}/timeline', [TimelineController::class, 'apiCaseTimeline'], [AuthMiddleware::class]);
-$router->get('/api/stats/dashboard', [StatsController::class, 'dashboard'], [AuthMiddleware::class]);
-$router->get('/publications', [PublicationController::class, 'index'], [AuthMiddleware::class]);
-
 
 // V52 - Manutenção e módulos avançados
 $router->get('/maintenance/diagnostics', [MaintenanceController::class, 'diagnostics'], [AuthMiddleware::class]);
@@ -239,65 +283,37 @@ $router->get('/search', [SearchController::class, 'index'], [AuthMiddleware::cla
 $router->get('/api/search', [SearchController::class, 'api'], [AuthMiddleware::class]);
 $router->get('/api/search/suggest', [SearchController::class, 'suggest'], [AuthMiddleware::class]);
 
-// Templates — complemento (2.2)
-$router->get('/templates/create', [TemplateController::class, 'create'], [AuthMiddleware::class]);
-$router->get('/templates/{id}/edit', [TemplateController::class, 'edit'], [AuthMiddleware::class]);
-$router->get('/templates/{id}/generate-form', [TemplateController::class, 'generateForm'], [AuthMiddleware::class]);
-$router->post('/templates/{id}/update', [TemplateController::class, 'update'], [AuthMiddleware::class]);
-$router->post('/templates/{id}/generate', [TemplateController::class, 'generate'], [AuthMiddleware::class]);
-$router->get('/generated-documents', [TemplateController::class, 'generated'], [AuthMiddleware::class]);
+// Repasses ao cliente (2.9)
+$router->get('/financial/repases', [FinancialRepasesController::class, 'index'], [AuthMiddleware::class]);
+$router->post('/financial/repases/store', [FinancialRepasesController::class, 'store'], [AuthMiddleware::class]);
+$router->post('/financial/repases/{id}/confirm', [FinancialRepasesController::class, 'confirm'], [AuthMiddleware::class]);
+$router->post('/financial/repases/{id}/delete', [FinancialRepasesController::class, 'delete'], [AuthMiddleware::class]);
 
-// Timeline do cliente (2.3)
-$router->get('/clients/{id}/timeline', [ClientController::class, 'timeline'], [AuthMiddleware::class]);
-$router->post('/clients/{id}/timeline/store', [ClientController::class, 'storeTimelineEvent'], [AuthMiddleware::class]);
-$router->get('/clients/{id}/notes', [ClientController::class, 'notes'], [AuthMiddleware::class]);
-$router->post('/clients/{id}/notes/store', [ClientController::class, 'storeNote'], [AuthMiddleware::class]);
-
-// Agenda — complemento CRUD (2.4)
-$router->post('/calendar/events/store', [CalendarController::class, 'store'], [AuthMiddleware::class]);
-$router->post('/calendar/events/{id}/update', [CalendarController::class, 'update'], [AuthMiddleware::class]);
-$router->post('/calendar/events/{id}/delete', [CalendarController::class, 'delete'], [AuthMiddleware::class]);
-
+// Contratos, pagamentos, DRE
 $router->get('/contracts', [OfficeModuleController::class, 'contracts'], [AuthMiddleware::class]);
 $router->get('/contracts/create', [OfficeModuleController::class, 'contractCreate'], [AuthMiddleware::class]);
 $router->post('/contracts/store', [OfficeModuleController::class, 'contractStore'], [AuthMiddleware::class]);
-
 $router->get('/payables', [OfficeModuleController::class, 'payables'], [AuthMiddleware::class]);
 $router->post('/payables', [OfficeModuleController::class, 'payableStore'], [AuthMiddleware::class]);
-
 $router->get('/dre', [OfficeModuleController::class, 'dre'], [AuthMiddleware::class]);
-
-$router->get('/leads', [OfficeModuleController::class, 'leads'], [AuthMiddleware::class]);
-$router->post('/leads', [OfficeModuleController::class, 'leadStore'], [AuthMiddleware::class]);
-
-$router->get('/checklists', [OfficeModuleController::class, 'checklists'], [AuthMiddleware::class]);
-$router->post('/checklists', [OfficeModuleController::class, 'checklistStore'], [AuthMiddleware::class]);
-
 $router->get('/client-requests', [OfficeModuleController::class, 'clientRequests'], [AuthMiddleware::class]);
 $router->post('/client-requests', [OfficeModuleController::class, 'clientRequestStore'], [AuthMiddleware::class]);
 
-// Provas (2.11)
-use App\Controllers\EvidenceController;
-$router->get('/cases/{id}/evidence', [EvidenceController::class, 'index'], [AuthMiddleware::class]);
-$router->post('/cases/{id}/evidence/store', [EvidenceController::class, 'store'], [AuthMiddleware::class]);
-$router->get('/evidence/{id}/edit', [EvidenceController::class, 'edit'], [AuthMiddleware::class]);
-$router->post('/evidence/{id}/update', [EvidenceController::class, 'update'], [AuthMiddleware::class]);
-$router->post('/evidence/{id}/delete', [EvidenceController::class, 'delete'], [AuthMiddleware::class]);
-
-// Estratégia Processual (2.12)
-use App\Controllers\CaseStrategyController;
-$router->get('/cases/{id}/strategy', [CaseStrategyController::class, 'show'], [AuthMiddleware::class]);
-$router->post('/cases/{id}/strategy/save', [CaseStrategyController::class, 'save'], [AuthMiddleware::class]);
+// Checklists (2.17)
+$router->get('/checklists', [ChecklistController::class, 'index'], [AuthMiddleware::class]);
+$router->post('/checklists/store', [ChecklistController::class, 'store'], [AuthMiddleware::class]);
+$router->post('/checklists/{id}/delete', [ChecklistController::class, 'delete'], [AuthMiddleware::class]);
+$router->get('/cases/{id}/checklist', [ChecklistController::class, 'caseChecklist'], [AuthMiddleware::class]);
+$router->post('/cases/{id}/checklist/apply', [ChecklistController::class, 'apply'], [AuthMiddleware::class]);
+$router->post('/checklist-items/{id}/toggle', [ChecklistController::class, 'toggleItem'], [AuthMiddleware::class]);
 
 // Prazos com Cálculo (2.5)
-use App\Controllers\DeadlineController;
 $router->get('/deadlines', [DeadlineController::class, 'index'], [AuthMiddleware::class]);
 $router->post('/deadlines/store', [DeadlineController::class, 'store'], [AuthMiddleware::class]);
 $router->post('/deadlines/{id}/confirm', [DeadlineController::class, 'confirm'], [AuthMiddleware::class]);
 $router->post('/deadlines/calculate', [DeadlineController::class, 'calculate'], [AuthMiddleware::class]);
 
 // Jurisprudência e Teses (2.18)
-use App\Controllers\KnowledgeController;
 $router->get('/knowledge/jurisprudence', [KnowledgeController::class, 'jurisprudence'], [AuthMiddleware::class]);
 $router->post('/knowledge/jurisprudence/store', [KnowledgeController::class, 'storeJurisprudence'], [AuthMiddleware::class]);
 $router->get('/knowledge/jurisprudence/{id}/edit', [KnowledgeController::class, 'editJurisprudence'], [AuthMiddleware::class]);
@@ -308,3 +324,13 @@ $router->post('/knowledge/theses/store', [KnowledgeController::class, 'storeThes
 $router->get('/knowledge/theses/{id}/edit', [KnowledgeController::class, 'editThesis'], [AuthMiddleware::class]);
 $router->post('/knowledge/theses/{id}/update', [KnowledgeController::class, 'updateThesis'], [AuthMiddleware::class]);
 $router->post('/knowledge/theses/{id}/delete', [KnowledgeController::class, 'deleteThesis'], [AuthMiddleware::class]);
+
+// Partes do processo — DataJud (2.7)
+$router->get('/cases/{id}/parties', [CasePartiesController::class, 'index'], [AuthMiddleware::class]);
+$router->post('/cases/{id}/parties/store', [CasePartiesController::class, 'store'], [AuthMiddleware::class]);
+$router->post('/cases/{id}/parties/sync', [CasePartiesController::class, 'syncFromDatajud'], [AuthMiddleware::class]);
+$router->post('/case-parties/{id}/delete', [CasePartiesController::class, 'delete'], [AuthMiddleware::class]);
+
+// Produtividade (2.19)
+$router->get('/productivity', [ProductivityController::class, 'index'], [AuthMiddleware::class]);
+$router->get('/api/productivity/stats', [ProductivityController::class, 'apiStats'], [AuthMiddleware::class]);

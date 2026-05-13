@@ -244,6 +244,40 @@ class ProcessSyncService
         }
     }
 
+    public function syncPartiesFromDatajud(int $caseId, string $numeroCnj): int
+    {
+        $db = Database::getInstance();
+        $cnj = new CNJService();
+        $data = $cnj->getProcessData($numeroCnj);
+        if (empty($data['partes'])) {
+            return 0;
+        }
+        $count = 0;
+        foreach ($data['partes'] as $parte) {
+            $nome = trim((string)($parte['nome'] ?? ''));
+            if ($nome === '') {
+                continue;
+            }
+            $tipo     = strtolower((string)($parte['tipo'] ?? 'reu'));
+            $polo     = strtolower((string)($parte['polo'] ?? 'passivo'));
+            $advogado = (string)($parte['advogado'] ?? '');
+            $oab      = (string)($parte['advogado_oab'] ?? '');
+            $existing = $db->prepare(
+                "SELECT id FROM case_parties WHERE case_id = ? AND nome = ? AND deleted_at IS NULL LIMIT 1"
+            );
+            $existing->execute([$caseId, $nome]);
+            if ($existing->fetchColumn()) {
+                continue;
+            }
+            $db->prepare(
+                "INSERT INTO case_parties (case_id, tipo, nome, polo, advogado, advogado_oab, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())"
+            )->execute([$caseId, $tipo, $nome, $polo, $advogado, $oab]);
+            $count++;
+        }
+        return $count;
+    }
+
     private function updateLastSync(): void
     {
         try {

@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['confirm'])) {
         $errors[] = 'SchemaGuard falhou: ' . $e->getMessage();
     }
 
-    // 3. Tabelas novas (v38): system_check, notifications, dashboard
+    // 3. Tabelas novas (v38+): system_check, notifications, dashboard, phase3, phase4
     try {
         $guard->ensureSystemCheckTables();
         $logs[] = ['ok', 'Tabelas system_check_runs e system_check_items verificadas.'];
@@ -95,6 +95,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['confirm'])) {
         $errors[] = 'dashboard tables: ' . $e->getMessage();
     }
 
+    try {
+        $guard->ensurePhase2Tables();
+        $logs[] = ['ok', 'Tabelas phase2 (search, documents, timeline, calendar) verificadas.'];
+    } catch (\Throwable $e) {
+        $errors[] = 'phase2 tables: ' . $e->getMessage();
+    }
+
+    try {
+        $guard->ensurePhase3Tables();
+        $logs[] = ['ok', 'Tabelas phase3 (evidence, strategy, deadlines, knowledge) verificadas.'];
+    } catch (\Throwable $e) {
+        $errors[] = 'phase3 tables: ' . $e->getMessage();
+    }
+
+    try {
+        $guard->ensurePhase4Tables();
+        $logs[] = ['ok', 'Tabelas phase4 (parties, repasses, receipts, checklists, productivity, reports, audit, portal) verificadas.'];
+    } catch (\Throwable $e) {
+        $errors[] = 'phase4 tables: ' . $e->getMessage();
+    }
+
     // 4. Roda SchemaMaintenanceService (colunas de compatibilidade)
     try {
         \App\Services\SchemaMaintenanceService::ensure();
@@ -112,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['confirm'])) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
         $stmt = $db->prepare("INSERT IGNORE INTO schema_version (version) VALUES (?)");
-        $stmt->execute(['v38-update-script']);
+        $stmt->execute(['v41-update-script']);
         $logs[] = ['ok', 'Versão v38 registrada em schema_version.'];
     } catch (\Throwable $e) {
         $errors[] = 'schema_version: ' . $e->getMessage();

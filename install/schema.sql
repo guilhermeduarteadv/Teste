@@ -561,6 +561,7 @@ CREATE TABLE `publications` (
   `data_publicacao` date DEFAULT NULL,
   `fonte` varchar(150) DEFAULT NULL,
   `hash` varchar(100) DEFAULT NULL,
+  `status` varchar(30) DEFAULT 'pending',
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
   `deleted_at` datetime DEFAULT NULL,
@@ -940,3 +941,260 @@ CREATE TABLE IF NOT EXISTS `legal_theses` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT IGNORE INTO `schema_version` (`version`) VALUES ('v39-evidence-strategy-deadlines-knowledge');
+
+-- =============================================================================
+-- Phase 2 modules (v40): Busca, Gerador, Timeline, Agenda
+-- =============================================================================
+
+-- 2.14 Busca Global
+CREATE TABLE IF NOT EXISTS `search_logs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `query` varchar(500) NOT NULL,
+  `results_count` int(11) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_search_logs_user` (`user_id`),
+  KEY `idx_search_logs_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 2.2 Gerador de Documentos
+CREATE TABLE IF NOT EXISTS `generated_documents` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `template_id` int(11) DEFAULT NULL,
+  `entity_type` varchar(50) DEFAULT NULL,
+  `entity_id` int(11) DEFAULT NULL,
+  `client_id` int(11) DEFAULT NULL,
+  `case_id` int(11) DEFAULT NULL,
+  `title` varchar(255) NOT NULL,
+  `output_format` varchar(20) DEFAULT 'html',
+  `file_path` varchar(500) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_gen_docs_template` (`template_id`),
+  KEY `idx_gen_docs_client` (`client_id`),
+  KEY `idx_gen_docs_case` (`case_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 2.3 Historico / Timeline do Cliente
+CREATE TABLE IF NOT EXISTS `client_timeline` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `client_id` int(11) NOT NULL,
+  `event_date` datetime NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `source` varchar(50) DEFAULT 'manual',
+  `source_id` int(11) DEFAULT NULL,
+  `visible_client` tinyint(1) NOT NULL DEFAULT 1,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_timeline_client` (`client_id`),
+  KEY `idx_timeline_date` (`event_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `client_notes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `client_id` int(11) NOT NULL,
+  `note` text NOT NULL,
+  `visibility` varchar(20) DEFAULT 'internal',
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_notes_client` (`client_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 2.4 Agenda Juridica Unificada
+CREATE TABLE IF NOT EXISTS `calendar_events` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `start_at` datetime NOT NULL,
+  `end_at` datetime DEFAULT NULL,
+  `all_day` tinyint(1) NOT NULL DEFAULT 0,
+  `location` varchar(255) DEFAULT NULL,
+  `event_type` varchar(50) DEFAULT 'outro',
+  `entity_type` varchar(50) DEFAULT NULL,
+  `entity_id` int(11) DEFAULT NULL,
+  `client_id` int(11) DEFAULT NULL,
+  `case_id` int(11) DEFAULT NULL,
+  `responsible_id` int(11) DEFAULT NULL,
+  `status` varchar(30) DEFAULT 'pendente',
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_cal_events_start` (`start_at`),
+  KEY `idx_cal_events_client` (`client_id`),
+  KEY `idx_cal_events_case` (`case_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT IGNORE INTO `schema_version` (`version`) VALUES ('v40-search-templates-timeline-calendar');
+
+-- 2.7 Partes do processo (DataJud parte contrária)
+CREATE TABLE IF NOT EXISTS `case_parties` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `case_id` int(11) NOT NULL,
+  `tipo` varchar(50) DEFAULT 'reu',
+  `polo` varchar(20) DEFAULT 'passivo',
+  `nome` varchar(255) NOT NULL,
+  `cpf_cnpj` varchar(30) DEFAULT NULL,
+  `advogado` varchar(255) DEFAULT NULL,
+  `advogado_oab` varchar(50) DEFAULT NULL,
+  `observacoes` text DEFAULT NULL,
+  `source` varchar(30) DEFAULT 'manual',
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_parties_case` (`case_id`),
+  KEY `idx_parties_tipo` (`tipo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 2.9 Repasses ao cliente
+CREATE TABLE IF NOT EXISTS `client_repasses` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `client_id` int(11) DEFAULT NULL,
+  `case_id` int(11) DEFAULT NULL,
+  `valor_recebido` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `valor_repassado` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `percentual_honorarios` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `data_recebimento` date DEFAULT NULL,
+  `data_repasse` date DEFAULT NULL,
+  `descricao` text DEFAULT NULL,
+  `status` varchar(30) DEFAULT 'pendente',
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_repasses_client` (`client_id`),
+  KEY `idx_repasses_case` (`case_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 2.9 Comprovantes financeiros múltiplos
+CREATE TABLE IF NOT EXISTS `financial_receipts` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `financial_entry_id` int(11) DEFAULT NULL,
+  `file_path` varchar(500) NOT NULL,
+  `file_name` varchar(255) DEFAULT NULL,
+  `file_type` varchar(50) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `uploaded_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_receipts_entry` (`financial_entry_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 2.17 Itens de checklist por processo
+CREATE TABLE IF NOT EXISTS `case_checklist_items` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `case_id` int(11) NOT NULL,
+  `template_id` int(11) DEFAULT NULL,
+  `item_text` varchar(500) NOT NULL,
+  `completed` tinyint(1) NOT NULL DEFAULT 0,
+  `completed_by` int(11) DEFAULT NULL,
+  `completed_at` datetime DEFAULT NULL,
+  `due_date` date DEFAULT NULL,
+  `sort_order` int(11) DEFAULT 0,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_checklist_case` (`case_id`),
+  KEY `idx_checklist_tpl` (`template_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 2.19 Snapshots de produtividade
+CREATE TABLE IF NOT EXISTS `productivity_snapshots` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `snapshot_date` date NOT NULL,
+  `tasks_completed` int(11) DEFAULT 0,
+  `tasks_overdue` int(11) DEFAULT 0,
+  `hours_logged` decimal(6,2) DEFAULT 0.00,
+  `cases_active` int(11) DEFAULT 0,
+  `deadlines_met` int(11) DEFAULT 0,
+  `deadlines_missed` int(11) DEFAULT 0,
+  `data_json` text DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_prod_snap_user` (`user_id`),
+  KEY `idx_prod_snap_date` (`snapshot_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 2.13 Relatórios gerados
+CREATE TABLE IF NOT EXISTS `generated_reports` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `report_type` varchar(50) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `entity_type` varchar(50) DEFAULT NULL,
+  `entity_id` int(11) DEFAULT NULL,
+  `file_path` varchar(500) DEFAULT NULL,
+  `output_format` varchar(20) DEFAULT 'html',
+  `params_json` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_gen_reports_type` (`report_type`),
+  KEY `idx_gen_reports_entity` (`entity_type`,`entity_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 2.16 Logs de acesso a documentos (auditoria)
+CREATE TABLE IF NOT EXISTS `document_access_logs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `document_id` int(11) DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `client_id` int(11) DEFAULT NULL,
+  `action` varchar(50) DEFAULT 'view',
+  `ip_address` varchar(50) DEFAULT NULL,
+  `user_agent` varchar(500) DEFAULT NULL,
+  `accessed_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_doc_access_doc` (`document_id`),
+  KEY `idx_doc_access_user` (`user_id`),
+  KEY `idx_doc_access_date` (`accessed_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 2.16 Exportações de dados (LGPD)
+CREATE TABLE IF NOT EXISTS `data_exports` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `entity_type` varchar(50) NOT NULL,
+  `entity_id` int(11) NOT NULL,
+  `requested_by` int(11) DEFAULT NULL,
+  `file_path` varchar(500) DEFAULT NULL,
+  `status` varchar(30) DEFAULT 'pending',
+  `expires_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `completed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_data_exports_entity` (`entity_type`,`entity_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- 2.10 Mensagens do portal (cliente ↔ escritório)
+CREATE TABLE IF NOT EXISTS `portal_messages` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `request_id` int(11) DEFAULT NULL,
+  `client_id` int(11) DEFAULT NULL,
+  `case_id` int(11) DEFAULT NULL,
+  `sender_type` varchar(20) DEFAULT 'client',
+  `sender_id` int(11) DEFAULT NULL,
+  `message` text NOT NULL,
+  `read_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_portal_msg_request` (`request_id`),
+  KEY `idx_portal_msg_client` (`client_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT IGNORE INTO `schema_version` (`version`) VALUES ('v41-phase4-parties-repasses-checklists');

@@ -6,6 +6,7 @@ namespace App\Controllers;
 use Core\Controller;
 use Core\Session;
 use Core\Database;
+use App\Services\ReportService;
 use PDO;
 
 class ReportController extends Controller
@@ -220,5 +221,87 @@ class ReportController extends Controller
             'success' => false,
             'message' => 'Exportação Excel requer instalação de biblioteca (PhpSpreadsheet). Configure no ambiente de produção.',
         ]);
+    }
+
+    public function generateCaseClient(string $id): void
+    {
+        $this->validateCsrf();
+        $caseId = (int)$id;
+        $userId = (int)Session::get('user_id');
+
+        $service = new ReportService();
+        $result  = $service->generateCaseReport($caseId, false, $userId);
+
+        if ($result['success']) {
+            // Return HTML directly for printing
+            header('Content-Type: text/html; charset=utf-8');
+            echo $result['html'];
+            exit;
+        }
+
+        $this->json($result, 500);
+    }
+
+    public function generateCaseInternal(string $id): void
+    {
+        $this->validateCsrf();
+        $caseId = (int)$id;
+        $userId = (int)Session::get('user_id');
+
+        $service = new ReportService();
+        $result  = $service->generateCaseReport($caseId, true, $userId);
+
+        if ($result['success']) {
+            header('Content-Type: text/html; charset=utf-8');
+            echo $result['html'];
+            exit;
+        }
+
+        $this->json($result, 500);
+    }
+
+    public function generateFinancialPdf(): void
+    {
+        $this->validateCsrf();
+        $userId = (int)Session::get('user_id');
+
+        $filters = [
+            'date_from' => $this->input('date_from', date('Y-m-01')),
+            'date_to'   => $this->input('date_to', date('Y-m-d')),
+            'status'    => $this->input('status', ''),
+            'tipo'      => $this->input('tipo', ''),
+            'client_id' => $this->input('client_id', ''),
+        ];
+
+        $service = new ReportService();
+        $result  = $service->generateFinancialReport($filters, $userId);
+
+        if ($result['success']) {
+            header('Content-Type: text/html; charset=utf-8');
+            echo $result['html'];
+            exit;
+        }
+
+        $this->json($result, 500);
+    }
+
+    public function generatedList(): void
+    {
+        try {
+            $stmt = $this->db->prepare(
+                "SELECT gr.*, u.name AS created_by_name
+                 FROM generated_reports gr
+                 LEFT JOIN users u ON u.id = gr.created_by
+                 WHERE gr.deleted_at IS NULL
+                 ORDER BY gr.created_at DESC
+                 LIMIT 100"
+            );
+            $stmt->execute();
+            $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            $reports = [];
+        }
+
+        $this->json(['success' => true, 'reports' => $reports]);
     }
 }

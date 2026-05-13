@@ -637,6 +637,125 @@ class SchemaGuardService
         try { $this->ensureDashboardTables(); } catch (\Throwable $e) {}
         try { $this->ensurePhase3Tables(); } catch (\Throwable $e) {}
         try { $this->ensureDeadlinePhase3Columns(); } catch (\Throwable $e) {}
+        try { $this->ensurePhase2Tables(); } catch (\Throwable $e) {}
+        try { $this->ensurePhase4Tables(); } catch (\Throwable $e) {}
+    }
+
+    public function ensurePhase2Tables(): void
+    {
+        // 2.14 Busca Global
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS search_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NULL,
+                    query VARCHAR(500) NOT NULL,
+                    results_count INT NOT NULL DEFAULT 0,
+                    created_at DATETIME NOT NULL,
+                    INDEX idx_search_logs_user (user_id),
+                    INDEX idx_search_logs_created (created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        // 2.2 Gerador de Documentos
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS generated_documents (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    template_id INT NULL,
+                    entity_type VARCHAR(50) NULL,
+                    entity_id INT NULL,
+                    client_id INT NULL,
+                    case_id INT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    output_format VARCHAR(20) DEFAULT 'html',
+                    file_path VARCHAR(500) NULL,
+                    created_by INT NULL,
+                    created_at DATETIME NOT NULL,
+                    deleted_at DATETIME NULL,
+                    INDEX idx_gen_docs_template (template_id),
+                    INDEX idx_gen_docs_client (client_id),
+                    INDEX idx_gen_docs_case (case_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        // Adicionar colunas ao legal_templates via addColumnIfMissing
+        $this->addColumnIfMissing('legal_templates', 'variables_json', 'TEXT NULL');
+        $this->addColumnIfMissing('legal_templates', 'active', 'TINYINT(1) DEFAULT 1');
+
+        // 2.3 Histórico / Timeline do Cliente
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS client_timeline (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    client_id INT NOT NULL,
+                    event_date DATETIME NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT NULL,
+                    source VARCHAR(50) DEFAULT 'manual',
+                    source_id INT NULL,
+                    visible_client TINYINT(1) NOT NULL DEFAULT 1,
+                    created_by INT NULL,
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    deleted_at DATETIME NULL,
+                    INDEX idx_timeline_client (client_id),
+                    INDEX idx_timeline_date (event_date)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS client_notes (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    client_id INT NOT NULL,
+                    note TEXT NOT NULL,
+                    visibility VARCHAR(20) DEFAULT 'internal',
+                    created_by INT NULL,
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    deleted_at DATETIME NULL,
+                    INDEX idx_notes_client (client_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        // 2.4 Agenda Jurídica Unificada
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS calendar_events (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT NULL,
+                    start_at DATETIME NOT NULL,
+                    end_at DATETIME NULL,
+                    all_day TINYINT(1) NOT NULL DEFAULT 0,
+                    location VARCHAR(255) NULL,
+                    event_type VARCHAR(50) DEFAULT 'outro',
+                    entity_type VARCHAR(50) NULL,
+                    entity_id INT NULL,
+                    client_id INT NULL,
+                    case_id INT NULL,
+                    responsible_id INT NULL,
+                    status VARCHAR(30) DEFAULT 'pendente',
+                    created_by INT NULL,
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    deleted_at DATETIME NULL,
+                    INDEX idx_cal_events_start (start_at),
+                    INDEX idx_cal_events_client (client_id),
+                    INDEX idx_cal_events_case (case_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        // schema_version record
+        try {
+            $this->db->exec("INSERT IGNORE INTO schema_version (version) VALUES ('v40-search-templates-timeline-calendar')");
+        } catch (\Throwable $e) {}
     }
 
     /**
@@ -974,6 +1093,202 @@ class SchemaGuardService
             if ($this->tableExists('settings')) {
                 $this->db->exec("UPDATE settings SET tipo = 'string' WHERE tipo IS NULL OR tipo = ''");
             }
+        } catch (\Throwable $e) {}
+    }
+
+    public function ensurePhase4Tables(): void
+    {
+        // 2.7 — Partes do processo (DataJud parte contrária)
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS case_parties (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    case_id INT NOT NULL,
+                    tipo VARCHAR(50) DEFAULT 'reu',
+                    polo VARCHAR(20) DEFAULT 'passivo',
+                    nome VARCHAR(255) NOT NULL,
+                    cpf_cnpj VARCHAR(30) NULL,
+                    advogado VARCHAR(255) NULL,
+                    advogado_oab VARCHAR(50) NULL,
+                    observacoes TEXT NULL,
+                    source VARCHAR(30) DEFAULT 'manual',
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    deleted_at DATETIME NULL,
+                    INDEX idx_parties_case (case_id),
+                    INDEX idx_parties_tipo (tipo)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        // 2.9 — Repasses ao cliente
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS client_repasses (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    client_id INT NULL,
+                    case_id INT NULL,
+                    valor_recebido DECIMAL(15,2) NOT NULL DEFAULT 0,
+                    valor_repassado DECIMAL(15,2) NOT NULL DEFAULT 0,
+                    percentual_honorarios DECIMAL(5,2) NOT NULL DEFAULT 0,
+                    data_recebimento DATE NULL,
+                    data_repasse DATE NULL,
+                    descricao TEXT NULL,
+                    status VARCHAR(30) DEFAULT 'pendente',
+                    created_by INT NULL,
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    deleted_at DATETIME NULL,
+                    INDEX idx_repasses_client (client_id),
+                    INDEX idx_repasses_case (case_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        // 2.9 — Comprovantes financeiros (múltiplos por lançamento)
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS financial_receipts (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    financial_entry_id INT NULL,
+                    file_path VARCHAR(500) NOT NULL,
+                    file_name VARCHAR(255) NULL,
+                    file_type VARCHAR(50) NULL,
+                    description VARCHAR(255) NULL,
+                    uploaded_by INT NULL,
+                    created_at DATETIME NOT NULL,
+                    deleted_at DATETIME NULL,
+                    INDEX idx_receipts_entry (financial_entry_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        // 2.17 — Itens de checklist por processo
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS case_checklist_items (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    case_id INT NOT NULL,
+                    template_id INT NULL,
+                    item_text VARCHAR(500) NOT NULL,
+                    completed TINYINT(1) NOT NULL DEFAULT 0,
+                    completed_by INT NULL,
+                    completed_at DATETIME NULL,
+                    due_date DATE NULL,
+                    sort_order INT DEFAULT 0,
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    deleted_at DATETIME NULL,
+                    INDEX idx_checklist_case (case_id),
+                    INDEX idx_checklist_tpl (template_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        // 2.19 — Snapshots de produtividade
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS productivity_snapshots (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NULL,
+                    snapshot_date DATE NOT NULL,
+                    tasks_completed INT DEFAULT 0,
+                    tasks_overdue INT DEFAULT 0,
+                    hours_logged DECIMAL(6,2) DEFAULT 0,
+                    cases_active INT DEFAULT 0,
+                    deadlines_met INT DEFAULT 0,
+                    deadlines_missed INT DEFAULT 0,
+                    data_json TEXT NULL,
+                    created_at DATETIME NOT NULL,
+                    INDEX idx_prod_snap_user (user_id),
+                    INDEX idx_prod_snap_date (snapshot_date)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        // 2.13 — Relatórios gerados
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS generated_reports (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    report_type VARCHAR(50) NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    entity_type VARCHAR(50) NULL,
+                    entity_id INT NULL,
+                    file_path VARCHAR(500) NULL,
+                    output_format VARCHAR(20) DEFAULT 'html',
+                    params_json TEXT NULL,
+                    created_by INT NULL,
+                    created_at DATETIME NOT NULL,
+                    deleted_at DATETIME NULL,
+                    INDEX idx_gen_reports_type (report_type),
+                    INDEX idx_gen_reports_entity (entity_type, entity_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        // 2.16 — Logs de acesso a documentos (auditoria)
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS document_access_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    document_id INT NULL,
+                    user_id INT NULL,
+                    client_id INT NULL,
+                    action VARCHAR(50) DEFAULT 'view',
+                    ip_address VARCHAR(50) NULL,
+                    user_agent VARCHAR(500) NULL,
+                    accessed_at DATETIME NOT NULL,
+                    INDEX idx_doc_access_doc (document_id),
+                    INDEX idx_doc_access_user (user_id),
+                    INDEX idx_doc_access_date (accessed_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        // 2.16 — Exportações de dados (LGPD)
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS data_exports (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    entity_type VARCHAR(50) NOT NULL,
+                    entity_id INT NOT NULL,
+                    requested_by INT NULL,
+                    file_path VARCHAR(500) NULL,
+                    status VARCHAR(30) DEFAULT 'pending',
+                    expires_at DATETIME NULL,
+                    created_at DATETIME NOT NULL,
+                    completed_at DATETIME NULL,
+                    INDEX idx_data_exports_entity (entity_type, entity_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        // 2.10 — Mensagens do portal (cliente ↔ escritório)
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS portal_messages (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    request_id INT NULL,
+                    client_id INT NULL,
+                    case_id INT NULL,
+                    sender_type VARCHAR(20) DEFAULT 'client',
+                    sender_id INT NULL,
+                    message TEXT NOT NULL,
+                    read_at DATETIME NULL,
+                    created_at DATETIME NOT NULL,
+                    deleted_at DATETIME NULL,
+                    INDEX idx_portal_msg_request (request_id),
+                    INDEX idx_portal_msg_client (client_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+        } catch (\Throwable $e) {}
+
+        // Coluna status na tabela publications (2.6)
+        $this->addColumnIfMissing('publications', 'status', "VARCHAR(30) DEFAULT 'pending'");
+
+        try {
+            $this->db->exec("INSERT IGNORE INTO schema_version (version) VALUES ('v41-phase4-parties-repasses-checklists')");
         } catch (\Throwable $e) {}
     }
 
