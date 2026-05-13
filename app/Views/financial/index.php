@@ -40,6 +40,92 @@
     </div>
 </div>
 
+
+<?php
+$monthlyRevenue = $monthlyRevenue ?? [];
+$maxMonthlyRevenue = 0;
+foreach ($monthlyRevenue as $item) {
+    $maxMonthlyRevenue = max($maxMonthlyRevenue, (float)($item['revenue'] ?? 0));
+}
+?>
+
+<!-- Monthly Revenue Chart -->
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="fas fa-chart-column me-2"></i>Recebido por mês
+        </div>
+        <small class="text-muted">Últimos 12 meses, considerando lançamentos com status pago</small>
+    </div>
+    <div class="card-body">
+        <?php if (empty($monthlyRevenue)): ?>
+            <div class="text-center text-muted py-4">Ainda não há pagamentos recebidos para exibir no gráfico.</div>
+        <?php else: ?>
+            <div class="monthly-revenue-chart">
+                <?php foreach ($monthlyRevenue as $item): ?>
+                    <?php
+                        $value = (float)($item['revenue'] ?? 0);
+                        $height = $maxMonthlyRevenue > 0 ? max(4, (int)round(($value / $maxMonthlyRevenue) * 160)) : 4;
+                    ?>
+                    <div class="monthly-revenue-item" title="<?= htmlspecialchars(($item['month'] ?? '') . ' - ' . FormatHelper::money($value), ENT_QUOTES, 'UTF-8') ?>">
+                        <div class="monthly-revenue-value"><?= FormatHelper::money($value) ?></div>
+                        <div class="monthly-revenue-bar-wrap">
+                            <div class="monthly-revenue-bar" style="height: <?= $height ?>px;"></div>
+                        </div>
+                        <div class="monthly-revenue-label"><?= htmlspecialchars($item['month'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<style>
+.monthly-revenue-chart {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(64px, 1fr));
+    gap: 0.75rem;
+    align-items: end;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+}
+.monthly-revenue-item {
+    min-width: 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.35rem;
+}
+.monthly-revenue-value {
+    font-size: 0.72rem;
+    color: #475569;
+    white-space: nowrap;
+}
+.monthly-revenue-bar-wrap {
+    height: 170px;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    border-bottom: 1px solid #e5e7eb;
+}
+.monthly-revenue-bar {
+    width: 70%;
+    min-height: 4px;
+    border-radius: 0.5rem 0.5rem 0 0;
+    background: linear-gradient(180deg, #059669, #047857);
+}
+.monthly-revenue-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    white-space: nowrap;
+}
+@media (max-width: 992px) {
+    .monthly-revenue-chart { grid-template-columns: repeat(12, 72px); }
+}
+</style>
+
 <!-- Filters -->
 <div class="card mb-3">
     <div class="card-body py-2">
@@ -51,7 +137,7 @@
             <div class="col-6 col-md-2">
                 <select class="form-select form-select-sm" name="status">
                     <option value="">Todos Status</option>
-                    <?php foreach (['pendente' => 'Pendente', 'pago' => 'Pago', 'vencido' => 'Vencido', 'cancelado' => 'Cancelado'] as $v => $l): ?>
+                    <?php foreach (['pendente' => 'Pendente', 'parcial' => 'Parcial', 'pago' => 'Pago', 'vencido' => 'Vencido', 'cancelado' => 'Cancelado'] as $v => $l): ?>
                     <option value="<?= $v ?>" <?= ($filters['status'] ?? '') === $v ? 'selected' : '' ?>><?= $l ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -112,16 +198,35 @@
                         <?php if ($e['parcela_numero'] && $e['parcela_total']): ?>
                         <div class="text-muted" style="font-size:0.72rem;">Parcela <?= $e['parcela_numero'] ?>/<?= $e['parcela_total'] ?></div>
                         <?php endif; ?>
+                        <?php if (!empty($e['parent_entry_id'])): ?>
+                        <div class="text-muted" style="font-size:0.72rem;">Pagamento vinculado à cobrança #<?= (int)$e['parent_entry_id'] ?><?= !empty($e['parent_descricao']) ? ' - ' . htmlspecialchars($e['parent_descricao'], ENT_QUOTES, 'UTF-8') : '' ?></div>
+                        <?php elseif (empty($e['is_payment']) && (float)($e['total_pago_vinculado'] ?? 0) > 0): ?>
+                        <?php
+                            $totalPago = (float)($e['total_pago_vinculado'] ?? 0);
+                            $valorTotal = (float)($e['valor'] ?? 0);
+                            $saldo = max($valorTotal - $totalPago, 0);
+                            $perc = $valorTotal > 0 ? min(100, round(($totalPago / $valorTotal) * 100)) : 0;
+                        ?>
+                        <div class="mt-1" style="max-width:260px;">
+                            <div class="d-flex justify-content-between text-muted" style="font-size:0.72rem;"><span>Recebido <?= FormatHelper::money($totalPago) ?></span><span>Saldo <?= FormatHelper::money($saldo) ?></span></div>
+                            <div class="progress" style="height:6px;"><div class="progress-bar bg-success" style="width: <?= $perc ?>%"></div></div>
+                        </div>
+                        <?php endif; ?>
                     </td>
                     <td><span class="badge bg-secondary"><?= ucfirst($e['tipo']) ?></span></td>
                     <td class="small"><?= htmlspecialchars($e['client_name'] ?? '—', ENT_QUOTES, 'UTF-8') ?></td>
                     <td class="small"><?= htmlspecialchars($e['numero_cnj'] ?? '—', ENT_QUOTES, 'UTF-8') ?></td>
                     <td class="small fw-semibold"><?= FormatHelper::money((float)$e['valor']) ?></td>
                     <td class="small <?= $isOverdue ? 'text-danger fw-bold' : '' ?>"><?= DateHelper::formatBr($e['vencimento']) ?></td>
-                    <td><?= FormatHelper::statusBadge($e['status']) ?></td>
+                    <td>
+                        <?= FormatHelper::statusBadge($e['status']) ?>
+                        <?php if (!empty($e['recibo_path'])): ?>
+                            <div class="mt-1"><a class="small" target="_blank" href="/financial/<?= (int)$e['id'] ?>/receipt"><i class="fas fa-paperclip me-1"></i>Comprovante</a></div>
+                        <?php endif; ?>
+                    </td>
                     <td class="text-end">
                         <div class="btn-group btn-group-sm">
-                            <?php if ($e['status'] === 'pendente'): ?>
+                            <?php if (in_array($e['status'], ['pendente','vencido'], true)): ?>
                             <button class="btn btn-outline-success btn-pay" data-id="<?= $e['id'] ?>" title="Marcar como pago">
                                 <i class="fas fa-check"></i>
                             </button>
@@ -161,7 +266,7 @@
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
             <div class="modal-header"><h5 class="modal-title">Registrar Pagamento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <form id="payForm" method="POST">
+            <form id="payForm" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8') ?>">
                 <div class="modal-body">
                     <div class="mb-3">
@@ -178,6 +283,11 @@
                             <option value="outros">Outros</option>
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comprovante</label>
+                        <input type="file" class="form-control" name="comprovante" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                        <div class="form-text">Opcional. PDF, JPG, PNG ou WEBP, até 10 MB.</div>
+                    </div>
                 </div>
                 <div class="modal-footer"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-success btn-sm">Confirmar</button></div>
             </form>
@@ -192,7 +302,7 @@
 <script>
 document.querySelectorAll('.btn-pay').forEach(btn => {
     btn.addEventListener('click', () => {
-        document.getElementById('payForm').action = `/financial/${btn.dataset.id}/pay`;
+        document.getElementById('payForm').action = `${APP_BASE_PATH}/financial/${btn.dataset.id}/pay`;
         new bootstrap.Modal(document.getElementById('payModal')).show();
     });
 });
@@ -200,7 +310,7 @@ document.querySelectorAll('.btn-delete-financial').forEach(btn => {
     btn.addEventListener('click', () => {
         if (!confirm('Excluir este lançamento?')) return;
         const form = document.getElementById('deleteFinancialForm');
-        form.action = `/financial/${btn.dataset.id}/delete`;
+        form.action = `${APP_BASE_PATH}/financial/${btn.dataset.id}/delete`;
         form.submit();
     });
 });

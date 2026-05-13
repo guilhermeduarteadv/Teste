@@ -4,6 +4,26 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
 define('ROOT_PATH', dirname(__DIR__));
+
+
+// Installation guard
+// If the system is not installed yet, redirect /public/ to /install/.
+$__installLock = ROOT_PATH . '/storage/installed.lock';
+$__installedConfig = ROOT_PATH . '/config/installed.php';
+
+if (!file_exists($__installLock) && !file_exists($__installedConfig)) {
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+    if (strpos($requestUri, '/install') === false) {
+        header('Location: /install/');
+        exit;
+    }
+}
+
+if (file_exists($__installedConfig)) {
+    require_once $__installedConfig;
+}
+unset($__installLock, $__installedConfig);
+
 define('START_TIME', microtime(true));
 
 // When Apache uses FallbackResource (mod_rewrite not loaded) it sets REDIRECT_URL
@@ -15,10 +35,26 @@ if (!empty($_SERVER['REDIRECT_URL'])) {
     $_SERVER['REQUEST_URI'] = $_SERVER['REDIRECT_URL'] . $qs;
 }
 
-// Auto-detect base path from the script's location (e.g. /teste/public)
-$_scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
-define('APP_BASE_PATH', rtrim($_scriptDir === '/' ? '' : $_scriptDir, '/'));
-unset($_scriptDir);
+// Auto-detect base path from the script's URL location.
+// Important: never allow Windows physical paths such as D:/AppServ/www/public to become URLs.
+$_scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/public/index.php');
+$_scriptDir  = str_replace('\\', '/', dirname($_scriptName));
+
+if ($_scriptDir === '/' || $_scriptDir === '.' || preg_match('/^[A-Z]:\//i', $_scriptDir)) {
+    $_scriptDir = '';
+}
+
+// AppServ/Windows fallback: when SCRIPT_NAME is physical, infer /public from REQUEST_URI.
+if ($_scriptDir === '' && !empty($_SERVER['REQUEST_URI'])) {
+    $_requestPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '';
+    $_requestPath = str_replace('\\', '/', $_requestPath);
+    if (strpos($_requestPath, '/public/') === 0 || $_requestPath === '/public') {
+        $_scriptDir = '/public';
+    }
+}
+
+if (!defined('APP_BASE_PATH')) { define('APP_BASE_PATH', rtrim($_scriptDir === '/' ? '' : $_scriptDir, '/')); }
+unset($_scriptName, $_scriptDir, $_requestPath);
 
 // Load environment variables
 if (file_exists(ROOT_PATH . '/.env')) {
@@ -91,12 +127,28 @@ spl_autoload_register(function (string $class): void {
     }
 });
 
+
+// Bootstrap database compatibility guard.
+// This runs after autoload and before dispatch, preventing missing table/column fatals.
+if (file_exists(ROOT_PATH . '/config/installed.php') || file_exists(ROOT_PATH . '/storage/installed.lock')) {
+    try {
+        if (class_exists('\App\Services\SchemaGuardService')) {
+            (new \App\Services\SchemaGuardService())->ensureV62FullRuntimeSchema();
+        }
+    } catch (\Throwable $e) {
+        // Do not block the app here; diagnostics/migrations can still be used.
+    }
+}
+
 // Initialize core components
 use Core\Logger;
 use Core\Session;
 use Core\Router;
 
 Logger::init(ROOT_PATH . '/logs');
+if (file_exists(ROOT_PATH . '/storage/installed.lock')) {
+    \App\Services\SchemaMaintenanceService::ensure();
+}
 Session::start([
     'name'     => $_ENV['SESSION_NAME'] ?? 'juriscontrol_session',
     'lifetime' => (int)($_ENV['SESSION_LIFETIME'] ?? 120),

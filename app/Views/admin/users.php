@@ -113,7 +113,7 @@ document.querySelectorAll('.btn-delete-user').forEach(btn => {
 });
 document.getElementById('confirmDeleteBtn')?.addEventListener('click', () => {
     const form = document.getElementById('deleteUserForm');
-    form.action = `/admin/users/${deleteUserId}/delete`;
+    form.action = (window.APP_BASE_PATH || '') + `/admin/users/${deleteUserId}/delete`;
     form.submit();
 });
 </script>

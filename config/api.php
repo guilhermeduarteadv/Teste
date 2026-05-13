@@ -26,4 +26,8 @@ return [
         'from'       => $_ENV['MAIL_FROM'] ?? 'noreply@juriscontrol.com.br',
         'encryption' => 'tls',
     ],
+    'eproc_tjsp' => [
+        // URL pública opcional para busca por OAB. Use {oab} e {uf} como placeholders se houver endpoint estável.
+        'oab_search_url' => ($_ENV['EPROC_TJSP_OAB_SEARCH_URL'] ?? ''),
+    ],
 ];

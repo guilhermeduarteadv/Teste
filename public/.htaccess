@@ -1,3 +1,10 @@
+# V57 public front controller
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
+</IfModule>
 Options +FollowSymLinks -Indexes
 
 # Block access to sensitive files
@@ -21,7 +28,7 @@ Options +FollowSymLinks -Indexes
 # Fallback when mod_rewrite is not loaded (FallbackResource requires Apache 2.2.16+)
 # NOTE: update the path below if your installation folder changes
 <IfModule !mod_rewrite.c>
-    FallbackResource /teste/public/index.php
+    FallbackResource /public/index.php
 </IfModule>
 
 <IfModule mod_headers.c>

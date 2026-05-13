@@ -1,0 +1,5 @@
+# Keep install independent from public front controller
+<IfModule mod_rewrite.c>
+RewriteEngine Off
+</IfModule>
+DirectoryIndex index.php

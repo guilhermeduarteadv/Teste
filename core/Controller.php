@@ -5,9 +5,30 @@ namespace Core;
 
 abstract class Controller
 {
+    protected function normalizeBasePath(string $basePath): string
+    {
+        $basePath = str_replace('\\', '/', $basePath);
+
+        if ($basePath === '/' || $basePath === '.' || preg_match('/^[A-Z]:\//i', $basePath)) {
+            $basePath = '';
+        }
+
+        // If a physical path slipped in, keep only /public when present.
+        $pos = stripos($basePath, '/public');
+        if ($pos !== false) {
+            $basePath = substr($basePath, $pos);
+        }
+
+        if ($basePath !== '' && $basePath[0] !== '/') {
+            $basePath = '/' . $basePath;
+        }
+
+        return rtrim($basePath, '/');
+    }
+
     protected function render(string $view, array $data = [], string $layout = 'main'): void
     {
-        $basePath = defined('APP_BASE_PATH') ? APP_BASE_PATH : '';
+        $basePath = $this->normalizeBasePath(defined('APP_BASE_PATH') ? APP_BASE_PATH : '');
 
         // Inject common template variables
         $data += [
@@ -56,9 +77,13 @@ abstract class Controller
 
     protected function json($data, int $code = 200): void
     {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
         http_response_code($code);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_INVALID_UTF8_SUBSTITUTE);
         exit;
     }
 
@@ -66,7 +91,10 @@ abstract class Controller
     {
         // Prepend base path for absolute internal URLs
         if (strncmp($url, '/', 1) === 0 && defined('APP_BASE_PATH') && APP_BASE_PATH !== '') {
-            $url = APP_BASE_PATH . $url;
+            $basePath = $this->normalizeBasePath(APP_BASE_PATH);
+            if ($basePath !== '' && strpos($url, $basePath . '/') !== 0 && $url !== $basePath) {
+                $url = $basePath . $url;
+            }
         }
         http_response_code($code);
         header('Location: ' . $url);

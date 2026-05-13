@@ -51,6 +51,14 @@
                            value="<?= htmlspecialchars($old['prazo'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                 </div>
                 <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold">Horário</label>
+                    <input type="time" class="form-control" name="hora" value="<?= htmlspecialchars($old['hora'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold">Local</label>
+                    <input type="text" class="form-control" name="local" maxlength="255" value="<?= htmlspecialchars($old['local'] ?? '', ENT_QUOTES, 'UTF-8') ?>" placeholder="Fórum, sala, endereço ou link">
+                </div>
+                <div class="col-12 col-md-4">
                     <label class="form-label fw-semibold">Responsável</label>
                     <select class="form-select" name="responsavel_id">
                         <option value="">Selecione...</option>

@@ -18,6 +18,12 @@
     </style>
 </head>
 <body>
+<script>
+window.APP_BASE_PATH = <?= json_encode($basePath ?? '') ?>;
+if (/^[A-Z]:\//i.test(window.APP_BASE_PATH || '')) { window.APP_BASE_PATH = '/public'; }
+const APP_BASE_PATH = window.APP_BASE_PATH || '';
+</script>
+
 <?php $portalClient = \Core\Session::get('portal_client'); ?>
 <nav class="portal-navbar d-flex align-items-center justify-content-between">
     <a href="/portal/cases" class="brand">
@@ -49,6 +55,11 @@
         <li class="nav-item">
             <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'] ?? '', '/portal/documents') === 0 ? 'active' : '' ?>" href="/portal/documents">
                 <i class="fas fa-folder me-1"></i>Documentos
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?= strpos($_SERVER['REQUEST_URI'] ?? '', '/portal/requests') === 0 ? 'active' : '' ?>" href="/portal/requests">
+                <i class="fas fa-inbox me-1"></i>Pendências
             </a>
         </li>
     </ul>

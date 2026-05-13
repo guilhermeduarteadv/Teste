@@ -9,10 +9,34 @@ use App\Helpers\DateHelper;
         <p class="text-muted small mb-0">Visão geral do escritório em <?= date('d/m/Y') ?></p>
     </div>
     <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-success" id="btnImportProcesses"><i class="fas fa-cloud-download-alt me-1"></i>Importar processos</button>
         <a href="/cases/create" class="btn btn-sm btn-primary"><i class="fas fa-plus me-1"></i>Novo Processo</a>
         <a href="/clients/create" class="btn btn-sm btn-outline-primary"><i class="fas fa-user-plus me-1"></i>Novo Cliente</a>
     </div>
 </div>
+
+<!-- Critical Alerts -->
+<?php
+$criticalAlerts = [];
+if (!empty($expiredDeadlines)) {
+    $criticalAlerts[] = ['type'=>'danger','icon'=>'fas fa-exclamation-circle','msg'=>count($expiredDeadlines).' prazo(s) vencido(s)','link'=>'/cases'];
+}
+if (!empty($overdueTasks)) {
+    $criticalAlerts[] = ['type'=>'warning','icon'=>'fas fa-tasks','msg'=>count($overdueTasks).' tarefa(s) atrasada(s)','link'=>'/tasks'];
+}
+if (($financialSummary['total_vencido'] ?? 0) > 0) {
+    $criticalAlerts[] = ['type'=>'warning','icon'=>'fas fa-dollar-sign','msg'=>'Inadimplência: '.FormatHelper::money((float)$financialSummary['total_vencido']),'link'=>'/financial'];
+}
+if (!empty($criticalAlerts)): ?>
+<div class="mb-3">
+    <?php foreach ($criticalAlerts as $alert): ?>
+    <a href="<?= $alert['link'] ?>" class="alert alert-<?= $alert['type'] ?> py-2 px-3 mb-1 d-flex align-items-center text-decoration-none" style="font-size:0.875rem;">
+        <i class="<?= $alert['icon'] ?> me-2"></i><?= htmlspecialchars($alert['msg'], ENT_QUOTES, 'UTF-8') ?>
+        <i class="fas fa-arrow-right ms-auto"></i>
+    </a>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
 
 <!-- Stats Cards -->
 <div class="row g-3 mb-4">
@@ -172,6 +196,27 @@ use App\Helpers\DateHelper;
         </div>
     </div>
 
+
+
+    <div class="col-12 col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="fas fa-chart-pie text-success me-2"></i>Processos por Área</div>
+            <div class="card-body">
+                <?php $areaTotal = array_sum($casesByArea ?? []); ?>
+                <?php foreach ($casesByArea ?? [] as $area => $cnt): ?>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span><?= htmlspecialchars($area, ENT_QUOTES, 'UTF-8') ?></span>
+                        <span class="fw-semibold"><?= $cnt ?> (<?= $areaTotal > 0 ? round($cnt / $areaTotal * 100) : 0 ?>%)</span>
+                    </div>
+                    <div class="progress" style="height:6px;"><div class="progress-bar bg-success" style="width:<?= $areaTotal > 0 ? ($cnt / $areaTotal * 100) : 0 ?>%"></div></div>
+                </div>
+                <?php endforeach; ?>
+                <?php if (empty($casesByArea)): ?><div class="text-center text-muted py-3">Nenhum processo classificado.</div><?php endif; ?>
+            </div>
+        </div>
+    </div>
+
     <!-- Case Status -->
     <div class="col-12 col-md-6">
         <div class="card">
@@ -201,3 +246,61 @@ use App\Helpers\DateHelper;
         </div>
     </div>
 </div>
+
+<script>
+function dashboardImportByOab(btn){
+    let oab = prompt('Informe o número da sua OAB, apenas números:', '513079');
+    if (oab === null) return;
+    oab = (oab || '').replace(/\D/g, '');
+
+    let uf = prompt('Informe a UF da OAB:', 'SP');
+    if (uf === null) return;
+    uf = (uf || '').trim().toUpperCase();
+
+    if (!oab || !uf) {
+        alert('Número OAB e estado são obrigatórios.');
+        return;
+    }
+
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Importando...';
+
+    const fd = new FormData();
+    fd.append('_csrf_token', '<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8') ?>');
+    fd.append('oab_number', oab);
+    fd.append('oab_state', uf);
+
+    fetch((window.APP_BASE_PATH || '') + '/api/cnj/sync', {
+        method: 'POST',
+        headers: {'X-CSRF-TOKEN': '<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8') ?>'},
+        body: fd
+    })
+    .then(async r => {
+        const text = await r.text();
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            const clean = (text || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+            return {success:false, message: clean ? ('Resposta inválida do servidor: ' + clean.substring(0, 500)) : 'Resposta inválida do servidor sem conteúdo.'};
+        }
+    })
+    .then(data => {
+        alert(data.message || 'Operação concluída.');
+        if (data.success) location.reload();
+    })
+    .catch(err => alert(err && err.message ? err.message : 'Erro ao importar processos.'))
+    .finally(() => { btn.disabled = false; btn.innerHTML = original; });
+}
+
+document.getElementById('btnImportProcesses')?.addEventListener('click', function(){ dashboardImportByOab(this); });
+</script>
+
+
+<div id="dashboard-stats-v36" class="row mt-4">
+    <div class="col-md-6" id="chart-processes-month"></div>
+    <div class="col-md-6" id="chart-received-month"></div>
+    <div class="col-md-6" id="chart-cases-area"></div>
+    <div class="col-md-6" id="chart-cases-comarca"></div>
+</div>
+<script src="<?= (defined('BASE_URL') ? BASE_URL : '/public') ?>/assets/js/dashboard_stats_v36.js"></script>

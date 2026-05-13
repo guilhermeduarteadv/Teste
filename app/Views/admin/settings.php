@@ -7,14 +7,23 @@
 
 <?php
 $get = function(string $key, string $default = '') use ($settings): string {
+    if (isset($settings[$key])) {
+        $item = $settings[$key];
+        if (is_array($item)) {
+            return (string)($item['value'] ?? $item['valor'] ?? $item['raw'] ?? $default);
+        }
+        return (string)$item;
+    }
     foreach ($settings as $s) {
-        if ($s['key'] === $key) return $s['value'] ?? $default;
+        if (is_array($s) && (($s['key'] ?? $s['chave'] ?? '') === $key)) {
+            return (string)($s['value'] ?? $s['valor'] ?? $s['raw'] ?? $default);
+        }
     }
     return $default;
 };
 ?>
 
-<form method="POST" action="/admin/settings/update" enctype="multipart/form-data">
+<form method="POST" action="<?= rtrim($base_path ?? '/public', '/') ?>/admin/settings/update" enctype="multipart/form-data">
     <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8') ?>">
 
     <div class="row g-3">

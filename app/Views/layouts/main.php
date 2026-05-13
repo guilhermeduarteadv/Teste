@@ -87,6 +87,12 @@
     </style>
 </head>
 <body>
+<script>
+window.APP_BASE_PATH = <?= json_encode($basePath ?? '') ?>;
+if (/^[A-Z]:\//i.test(window.APP_BASE_PATH || '')) { window.APP_BASE_PATH = '/public'; }
+const APP_BASE_PATH = window.APP_BASE_PATH || '';
+</script>
+
 <?php
 $currentUser = \Core\Session::get('user');
 $currentUri  = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
@@ -117,19 +123,63 @@ $isActive = function(string $path) use ($currentUri): string {
         <a href="/cases" class="nav-link <?= $isActive('/cases') ?>">
             <i class="fas fa-gavel"></i> Processos
         </a>
+
+        <a href="/administrative-procedures" class="nav-link <?= $isActive('/administrative-procedures') ?>">
+            <i class="fas fa-city"></i> Administrativos
+        </a>
+        <a href="/consultancies" class="nav-link <?= $isActive('/consultancies') ?>">
+            <i class="fas fa-comments"></i> Consultorias
+        </a>
+
         <a href="/tasks" class="nav-link <?= $isActive('/tasks') ?>">
             <i class="fas fa-tasks"></i> Tarefas
         </a>
         <a href="/financial" class="nav-link <?= $isActive('/financial') ?>">
             <i class="fas fa-dollar-sign"></i> Financeiro
         </a>
+        <a href="/timesheets" class="nav-link <?= $isActive('/timesheets') ?>">
+            <i class="fas fa-stopwatch"></i> Timesheet
+        </a>
+
+        <a href="/contracts" class="nav-link <?= $isActive('/contracts') ?>">
+            <i class="fas fa-file-contract"></i> Honorários
+        </a>
+        <a href="/payables" class="nav-link <?= $isActive('/payables') ?>">
+            <i class="fas fa-receipt"></i> Contas a Pagar
+        </a>
+        <a href="/dre" class="nav-link <?= $isActive('/dre') ?>">
+            <i class="fas fa-calculator"></i> DRE
+        </a>
+        <a href="/leads" class="nav-link <?= $isActive('/leads') ?>">
+            <i class="fas fa-user-plus"></i> Leads
+        </a>
+        <a href="/checklists" class="nav-link <?= $isActive('/checklists') ?>">
+            <i class="fas fa-clipboard-check"></i> Checklists
+        </a>
+        <a href="/client-requests" class="nav-link <?= $isActive('/client-requests') ?>">
+            <i class="fas fa-inbox"></i> Pendências Cliente
+        </a>
+
+        <a href="/publications" class="nav-link <?= $isActive('/publications') ?>">
+            <i class="fas fa-newspaper"></i> Publicações
+        </a>
         <a href="/documents" class="nav-link <?= $isActive('/documents') ?>">
             <i class="fas fa-folder-open"></i> Documentos
+        </a>
+
+        <a href="/tribunals" class="nav-link <?= $isActive('/tribunals') ?>">
+            <i class="fas fa-plug"></i> Tribunais
+        </a>
+        <a href="/templates" class="nav-link <?= $isActive('/templates') ?>">
+            <i class="fas fa-file-alt"></i> Modelos
         </a>
 
         <div class="nav-section">Análise</div>
         <a href="/reports" class="nav-link <?= $isActive('/reports') ?>">
             <i class="fas fa-chart-bar"></i> Relatórios
+        </a>
+        <a href="/stats" class="nav-link <?= $isActive('/stats') ?>">
+            <i class="fas fa-chart-line"></i> Estatísticas
         </a>
 
         <?php if (($currentUser['role'] ?? '') === 'admin'): ?>
@@ -140,9 +190,32 @@ $isActive = function(string $path) use ($currentUri): string {
         <a href="/admin/settings" class="nav-link <?= $isActive('/admin/settings') ?>">
             <i class="fas fa-cog"></i> Configurações
         </a>
+        <a href="/admin/tribunals" class="nav-link <?= $isActive('/admin/tribunals') ?>">
+            <i class="fas fa-landmark"></i> Tribunais
+        </a>
         <a href="/admin/logs" class="nav-link <?= $isActive('/admin/logs') ?>">
             <i class="fas fa-list-alt"></i> Logs
         </a>
+        <a href="/diagnostics" class="nav-link <?= $isActive('/diagnostics') ?>">
+            <i class="fas fa-stethoscope"></i> Diagnóstico
+        </a>
+        <a href="/backups" class="nav-link <?= $isActive('/backups') ?>">
+            <i class="fas fa-database"></i> Backup
+        </a>
+
+        <a href="/admin/system-check" class="nav-link <?= $isActive('/admin/system-check') ?>">
+            <i class="fas fa-shield-alt"></i> Saúde do Sistema
+        </a>
+        <a href="/maintenance/diagnostics" class="nav-link <?= $isActive('/maintenance/diagnostics') ?>">
+            <i class="fas fa-heartbeat"></i> Diagnóstico Avançado
+        </a>
+        <a href="/maintenance/migrations" class="nav-link <?= $isActive('/maintenance/migrations') ?>">
+            <i class="fas fa-code-branch"></i> Atualizações
+        </a>
+        <a href="/maintenance/error-logs" class="nav-link <?= $isActive('/maintenance/error-logs') ?>">
+            <i class="fas fa-bug"></i> Logs de Erro
+        </a>
+
         <?php endif; ?>
 
         <div class="nav-section">Portal</div>
@@ -189,6 +262,12 @@ $isActive = function(string $path) use ($currentUri): string {
                 <i class="far fa-clock me-1"></i><?= date('d/m/Y H:i') ?>
             </span>
             <div class="dropdown">
+                <a href="/notifications" class="btn btn-sm btn-outline-secondary position-relative" title="Notificações">
+                    <i class="fas fa-bell"></i>
+                    <span id="notif-counter" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;font-size:0.6rem;">0</span>
+                </a>
+            </div>
+            <div class="dropdown">
                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                     <i class="fas fa-user me-1"></i><?= htmlspecialchars(explode(' ', $currentUser['name'] ?? 'Usuário')[0], ENT_QUOTES, 'UTF-8') ?>
                 </button>
@@ -232,6 +311,33 @@ document.querySelectorAll('.alert-dismissible').forEach(function(el) {
         bsAlert && bsAlert.close();
     }, 5000);
 });
+
+// Notification badge polling
+(function() {
+    var BASE = '<?= defined('APP_BASE_PATH') ? APP_BASE_PATH : '' ?>';
+    function updateNotifCount() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', BASE + '/api/notifications/unread');
+        xhr.onload = function() {
+            try {
+                var data = JSON.parse(xhr.responseText);
+                var counter = document.getElementById('notif-counter');
+                if (counter) {
+                    if (data.count > 0) {
+                        counter.textContent = data.count > 99 ? '99+' : data.count;
+                        counter.style.display = '';
+                    } else {
+                        counter.style.display = 'none';
+                    }
+                }
+            } catch(e) {}
+        };
+        xhr.onerror = function() {};
+        xhr.send();
+    }
+    updateNotifCount();
+    setInterval(updateNotifCount, 60000);
+})();
 </script>
 </body>
 </html>

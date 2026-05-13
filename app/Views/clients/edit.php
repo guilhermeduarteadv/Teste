@@ -167,7 +167,7 @@ document.getElementById('cep')?.addEventListener('blur', async function() {
     const cep = this.value.replace(/\D/g, '');
     if (cep.length === 8) {
         try {
-            const resp = await fetch('/api/cep/' + cep);
+            const resp = await fetch(APP_BASE_PATH + '/api/cep/' + cep);
             const json = await resp.json();
             if (json.success) {
                 document.getElementById('endereco').value = json.logradouro || '';

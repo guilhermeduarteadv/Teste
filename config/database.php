@@ -1,4 +1,7 @@
 <?php
+if (file_exists(__DIR__ . '/installed.php')) { require_once __DIR__ . '/installed.php'; }
+?>
+<?php
 return [
     'default' => 'mysql',
     'connections' => [

@@ -1,0 +1,16 @@
+{
+  "version": "v37",
+  "generated_at": "2026-05-13",
+  "php_target": "7.3.10+",
+  "db_target": "MySQL 5.7+ / MariaDB 10.3+",
+  "schema": "install/schema.sql (consolidado, 32 tabelas)",
+  "seed":   "install/seed.sql (4 roles + 7 settings)",
+  "changelog": [
+    "Schema consolidado: 28 migrations -> 1 schema.sql",
+    "Removidas 12 tabelas mortas (criadas em 052 mas nunca usadas)",
+    "Removido arquivo backup CNJService - Copia.php",
+    "Instalador refeito: cria DB, aplica schema, seed e admin em uma etapa",
+    "Validada compatibilidade PHP 7.3.10 (158/158 arquivos)",
+    "Migrations antigas arquivadas em database/migrations/_legacy/"
+  ]
+}

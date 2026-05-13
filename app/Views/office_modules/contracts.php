@@ -1,0 +1,5 @@
+<div class="d-flex justify-content-between align-items-center mb-4"><h4 class="fw-bold mb-0">Contratos de Honorários</h4><a href="/contracts/create" class="btn btn-primary">Novo contrato</a></div>
+<div class="card"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Título</th><th>Tipo</th><th>Fixo</th><th>Mensal</th><th>Êxito</th><th>Status</th></tr></thead><tbody>
+<?php foreach (($items ?? []) as $item): ?><tr><td><?= htmlspecialchars($item['title'] ?? '') ?></td><td><?= htmlspecialchars($item['fee_type'] ?? '') ?></td><td>R$ <?= number_format((float)($item['fixed_amount'] ?? 0),2,',','.') ?></td><td>R$ <?= number_format((float)($item['monthly_amount'] ?? 0),2,',','.') ?></td><td><?= htmlspecialchars((string)($item['success_percentage'] ?? '')) ?>%</td><td><?= htmlspecialchars($item['status'] ?? '') ?></td></tr><?php endforeach; ?>
+<?php if (empty($items)): ?><tr><td colspan="6" class="text-center text-muted p-4">Nenhum contrato.</td></tr><?php endif; ?>
+</tbody></table></div></div>

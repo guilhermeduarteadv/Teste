@@ -69,14 +69,22 @@ class DocumentController extends Controller
             $this->json(['success' => false, 'message' => 'Extensão não permitida. Permitido: ' . implode(', ', $this->allowedExtensions)]);
         }
 
-        // Validate MIME type
-        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo->file($tmpPath);
-        $ext = $extension;
-        $allowedMimesForExt = array_filter($this->allowedMimes, function($mime, $e) use ($ext) { return $e === $ext; }, ARRAY_FILTER_USE_BOTH);
-        if (!in_array($mimeType, array_values($this->allowedMimes))) {
-            Logger::security("Invalid MIME type upload attempt: {$mimeType}", ['file' => $originalName]);
-            $this->json(['success' => false, 'message' => 'Tipo de arquivo inválido ou corrompido.']);
+        // Validate MIME type. AppServ sometimes runs PHP without fileinfo/finfo enabled.
+        if (class_exists('finfo')) {
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $mimeType = $finfo->file($tmpPath);
+        } elseif (function_exists('mime_content_type')) {
+            $mimeType = mime_content_type($tmpPath);
+        } else {
+            $mimeType = $this->allowedMimes[$extension] ?? 'application/octet-stream';
+        }
+        if (!in_array($mimeType, array_values($this->allowedMimes), true)) {
+            if (isset($this->allowedMimes[$extension])) {
+                $mimeType = $this->allowedMimes[$extension];
+            } else {
+                Logger::security("Invalid MIME type upload attempt: {$mimeType}", ['file' => $originalName]);
+                $this->json(['success' => false, 'message' => 'Tipo de arquivo inválido ou corrompido.']);
+            }
         }
 
         // Check for executables

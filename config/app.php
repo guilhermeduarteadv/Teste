@@ -3,7 +3,7 @@ return [
     'name'     => $_ENV['APP_NAME'] ?? 'JurisControl',
     'env'      => $_ENV['APP_ENV'] ?? 'production',
     'debug'    => filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN),
-    'url'      => $_ENV['APP_URL'] ?? 'http://localhost',
+    'url'      => $_ENV['APP_URL'] ?? 'http://localhost:8090',
     'timezone' => $_ENV['APP_TIMEZONE'] ?? 'America/Sao_Paulo',
     'key'      => $_ENV['APP_KEY'] ?? '',
     'version'  => '1.0.0',

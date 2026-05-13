@@ -138,6 +138,13 @@ class TaskController extends Controller
         }
         $this->model->softDelete((int)$id);
         SystemLogService::delete('tasks', 'task', (int)$id);
+
+        if (!$this->isAjax()) {
+            Session::flash('success', 'Tarefa excluída com sucesso.');
+            $this->back();
+            return;
+        }
+
         $this->json(['success' => true, 'message' => 'Tarefa excluída com sucesso.']);
     }
 
@@ -150,6 +157,13 @@ class TaskController extends Controller
         }
         $this->model->complete((int)$id);
         SystemLogService::update('tasks', 'task', (int)$id, $task, ['status' => 'concluida']);
+
+        if (!$this->isAjax()) {
+            Session::flash('success', 'Tarefa concluída com sucesso!');
+            $this->back();
+            return;
+        }
+
         $this->json(['success' => true, 'message' => 'Tarefa concluída com sucesso!']);
     }
 
@@ -163,6 +177,8 @@ class TaskController extends Controller
             'client_id'     => (int)$this->input('client_id', '0') ?: null,
             'responsavel_id' => (int)$this->input('responsavel_id', '0') ?: null,
             'prazo'         => $this->input('prazo', '') ?: null,
+            'hora'          => $this->input('hora', '') ?: null,
+            'local'         => $this->input('local', ''),
             'prioridade'    => $this->input('prioridade', 'media'),
             'status'        => $this->input('status', 'pendente'),
             'observacoes'   => $this->input('observacoes', ''),

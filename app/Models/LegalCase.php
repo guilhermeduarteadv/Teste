@@ -43,7 +43,8 @@ class LegalCase extends Model
 
         $offset = ($page - 1) * $perPage;
         $sql = "SELECT c.*, u.name as responsavel_name,
-                    (SELECT GROUP_CONCAT(cl.name SEPARATOR ', ') FROM case_clients cc JOIN clients cl ON cc.client_id = cl.id WHERE cc.case_id = c.id) as client_names
+                    (SELECT GROUP_CONCAT(cl.name SEPARATOR ', ') FROM case_clients cc JOIN clients cl ON cc.client_id = cl.id WHERE cc.case_id = c.id) as client_names,
+                    (SELECT GROUP_CONCAT(cl.name SEPARATOR ', ') FROM case_clients cc JOIN clients cl ON cc.client_id = cl.id WHERE cc.case_id = c.id) as clientes
                 FROM cases c
                 LEFT JOIN users u ON c.responsavel_id = u.id
                 WHERE {$where} ORDER BY c.updated_at DESC LIMIT {$perPage} OFFSET {$offset}";
@@ -181,6 +182,7 @@ class LegalCase extends Model
         return [
             'total'      => (int)$db->query("SELECT COUNT(*) FROM cases WHERE deleted_at IS NULL")->fetchColumn(),
             'ativos'     => (int)$db->query("SELECT COUNT(*) FROM cases WHERE status='ativo' AND deleted_at IS NULL")->fetchColumn(),
+            'ativo'      => (int)$db->query("SELECT COUNT(*) FROM cases WHERE status='ativo' AND deleted_at IS NULL")->fetchColumn(),
             'arquivados' => (int)$db->query("SELECT COUNT(*) FROM cases WHERE status='arquivado' AND deleted_at IS NULL")->fetchColumn(),
             'suspensos'  => (int)$db->query("SELECT COUNT(*) FROM cases WHERE status='suspenso' AND deleted_at IS NULL")->fetchColumn(),
         ];
@@ -212,7 +214,7 @@ class LegalCase extends Model
     public function getTodayDeadlines(): array
     {
         return $this->query(
-            "SELECT d.*, c.numero_cnj, c.id as case_id FROM case_deadlines d JOIN cases c ON d.case_id = c.id WHERE d.status = 'pendente' AND d.data_final = CURDATE() AND d.deleted_at IS NULL ORDER BY d.tipo ASC"
+            "SELECT d.*, c.numero_cnj, c.id as case_id FROM case_deadlines d JOIN cases c ON d.case_id = c.id WHERE d.status = 'pendente' AND d.data_final = CURDATE() AND d.deleted_at IS NULL ORDER BY COALESCE(d.tipo, d.title, d.descricao) ASC"
         );
     }
 
@@ -232,5 +234,32 @@ class LegalCase extends Model
             $result[$row['status']] = (int)$row['total'];
         }
         return $result;
+    }
+
+    public function getByArea(): array
+    {
+        $rows = $this->query("SELECT COALESCE(NULLIF(area, ''), 'Não classificada') AS area, COUNT(*) as total FROM cases WHERE deleted_at IS NULL GROUP BY COALESCE(NULLIF(area, ''), 'Não classificada') ORDER BY total DESC");
+        $result = [];
+        foreach ($rows as $row) { $result[$row['area']] = (int)$row['total']; }
+        return $result;
+    }
+
+    public function findAllRegisteredForSync(): array
+    {
+        return $this->query("SELECT * FROM cases WHERE deleted_at IS NULL AND numero_cnj IS NOT NULL AND numero_cnj <> '' AND COALESCE(segredo_justica, 0) = 0 ORDER BY updated_at DESC");
+    }
+
+    public function upsertFromProcessData(array $data): string
+    {
+        $numero = $data['numero_cnj'] ?? '';
+        if ($numero === '') return 'skip';
+        $existing = $this->queryOne("SELECT id FROM cases WHERE numero_cnj = ? AND deleted_at IS NULL LIMIT 1", [$numero]);
+        $allowed = ['numero_cnj','tribunal','sistema','comarca','vara','classe','area','assunto','valor_causa','fase_processual','status','cnj_raw_data','fonte_importacao','segredo_justica','last_sync_at','last_movement_hash','parte_contraria_nome','parte_contraria_tipo_pessoa','parte_contraria_cpf_cnpj','parte_contraria_rg_ie','parte_contraria_email','parte_contraria_telefone','parte_contraria_endereco','parte_contraria_numero','parte_contraria_complemento','parte_contraria_bairro','parte_contraria_cidade','parte_contraria_estado','parte_contraria_cep','parte_contraria_advogado','parte_contraria_advogado_oab','parte_contraria_observacoes'];
+        $payload = [];
+        foreach ($allowed as $key) { if (array_key_exists($key, $data)) $payload[$key] = $data[$key]; }
+        if ($existing) { $this->update((int)$existing['id'], $payload); return 'updated'; }
+        if (empty($payload['status'])) $payload['status'] = 'ativo';
+        $this->insert($payload);
+        return 'new';
     }
 }

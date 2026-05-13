@@ -1,4 +1,7 @@
-<?php $old = $old ?? []; ?>
+<?php
+use App\Helpers\FormatHelper;
+$old = $old ?? [];
+?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -13,7 +16,7 @@
 
 <div class="card">
     <div class="card-body">
-        <form method="POST" action="/financial/store" novalidate>
+        <form method="POST" action="/financial/store" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8') ?>">
             <div class="row g-3">
                 <div class="col-12 col-md-6">
@@ -28,10 +31,26 @@
                 <div class="col-12 col-md-6">
                     <label class="form-label fw-semibold">Status</label>
                     <select class="form-select" name="status">
-                        <?php foreach (['pendente' => 'Pendente', 'pago' => 'Pago', 'cancelado' => 'Cancelado'] as $v => $l): ?>
+                        <?php foreach (['pendente' => 'Pendente', 'pago' => 'Pago', 'parcial' => 'Parcial', 'cancelado' => 'Cancelado'] as $v => $l): ?>
                         <option value="<?= $v ?>" <?= ($old['status'] ?? 'pendente') === $v ? 'selected' : '' ?>><?= $l ?></option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Vincular como pagamento/parcela de uma cobrança existente</label>
+                    <select class="form-select" name="parent_entry_id" id="parent_entry_id">
+                        <option value="">Não vincular — este lançamento é uma cobrança independente</option>
+                        <?php foreach ($openReceivables ?? [] as $rec): ?>
+                        <?php
+                            $saldo = (float)($rec['saldo_aberto'] ?? $rec['valor']);
+                            $label = '#' . $rec['id'] . ' - ' . ($rec['client_name'] ?? 'Sem cliente') . ' - ' . ($rec['descricao'] ?? '') . ' - saldo ' . FormatHelper::money($saldo);
+                        ?>
+                        <option value="<?= $rec['id'] ?>" data-saldo="<?= number_format($saldo, 2, '.', '') ?>" <?= (int)($old['parent_entry_id'] ?? 0) === (int)$rec['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <div class="form-text">Use este campo quando você já lançou o valor total a receber e quer registrar um pagamento parcial ou uma parcela que abate esse total.</div>
                 </div>
                 <div class="col-12">
                     <label class="form-label fw-semibold">Descrição *</label>
@@ -93,6 +112,11 @@
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold">Comprovante de Pagamento</label>
+                    <input type="file" class="form-control" name="comprovante" accept=".pdf,.jpg,.jpeg,.png,.webp">
+                    <div class="form-text">PDF, JPG, PNG ou WEBP, até 10 MB.</div>
+                </div>
                 <div class="col-12">
                     <label class="form-label fw-semibold">Observações</label>
                     <textarea class="form-control" name="observacoes" rows="2"><?= htmlspecialchars($old['observacoes'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
@@ -112,3 +136,21 @@
         </form>
     </div>
 </div>
+
+<script>
+(function(){
+    const parentSelect = document.getElementById('parent_entry_id');
+    if (!parentSelect) return;
+    const status = document.querySelector('select[name="status"]');
+    const dataPagamento = document.querySelector('input[name="data_pagamento"]');
+    const valor = document.querySelector('input[name="valor"]');
+    parentSelect.addEventListener('change', function(){
+        if (this.value) {
+            if (status) status.value = 'pago';
+            if (dataPagamento && !dataPagamento.value) dataPagamento.value = new Date().toISOString().slice(0,10);
+            const opt = this.options[this.selectedIndex];
+            if (valor && !valor.value && opt.dataset.saldo) valor.value = opt.dataset.saldo.replace('.', ',');
+        }
+    });
+})();
+</script>

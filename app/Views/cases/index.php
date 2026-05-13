@@ -5,7 +5,7 @@
         <h4 class="fw-bold mb-0">Processos</h4>
         <p class="text-muted small mb-0">Total: <?= number_format($pagination['total'] ?? 0) ?> processos</p>
     </div>
-    <a href="/cases/create" class="btn btn-primary"><i class="fas fa-plus me-2"></i>Novo Processo</a>
+    <div class="d-flex gap-2"><button type="button" id="btnSyncRegistered" class="btn btn-outline-primary"><i class="fas fa-sync me-2"></i>Sincronizar cadastrados</button><button type="button" id="btnImportProcesses" class="btn btn-success"><i class="fas fa-cloud-download-alt me-2"></i>Importar por OAB</button><a href="/cases/create" class="btn btn-primary"><i class="fas fa-plus me-2"></i>Novo Processo</a></div>
 </div>
 
 <div class="card mb-3">
@@ -67,6 +67,9 @@
                         <?php if (!empty($case['risco_processual'])): ?>
                         <br><?= FormatHelper::riskBadge($case['risco_processual']) ?>
                         <?php endif; ?>
+                        <?php if (!empty($case['segredo_justica'])): ?>
+                        <br><span class="badge bg-dark"><i class="fas fa-lock me-1"></i>Segredo de justiça</span>
+                        <?php endif; ?>
                     </td>
                     <td class="small">
                         <?= htmlspecialchars(\App\Helpers\FormatHelper::truncate($case['assunto'] ?? '', 60), ENT_QUOTES, 'UTF-8') ?>
@@ -81,6 +84,7 @@
                     <td class="text-end">
                         <div class="btn-group btn-group-sm">
                             <a href="/cases/<?= $case['id'] ?>" class="btn btn-outline-primary" title="Ver"><i class="fas fa-eye"></i></a>
+                            <a href="/cases/<?= $case['id'] ?>/timeline" class="btn btn-outline-info" title="Linha do tempo"><i class="fas fa-stream"></i></a>
                             <a href="/cases/<?= $case['id'] ?>/edit" class="btn btn-outline-secondary" title="Editar"><i class="fas fa-edit"></i></a>
                         </div>
                     </td>
@@ -105,3 +109,67 @@
     </div>
     <?php endif; ?>
 </div>
+
+<script>
+function postSync(url, btn, loadingText, formData){
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>' + loadingText;
+
+    const body = formData || new FormData();
+    body.append('_csrf_token', '<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8') ?>');
+
+    fetch(url, {
+        method:'POST',
+        headers:{'X-CSRF-TOKEN':'<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8') ?>'},
+        body: body
+    })
+      .then(async r => {
+          const text = await r.text();
+          let data;
+          try {
+              data = JSON.parse(text);
+          } catch (e) {
+              console.error('Resposta bruta do servidor:', text);
+              const clean = (text || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+              return {
+                  success: false,
+                  message: clean ? ('Resposta inválida do servidor: ' + clean.substring(0, 500)) : 'Resposta inválida do servidor sem conteúdo.'
+              };
+          }
+          if (!r.ok && data.needs_oab) {
+              return data;
+          }
+          return data;
+      })
+      .then(data => {
+          alert(data.message || 'Operação concluída.');
+          if (data.success) location.reload();
+      })
+      .catch(()=>alert('Erro ao executar sincronização.'))
+      .finally(()=>{ btn.disabled=false; btn.innerHTML=original; });
+}
+
+function askOabAndImport(btn){
+    let oab = prompt('Informe o número da sua OAB, apenas números:', '513079');
+    if (oab === null) return;
+    oab = (oab || '').replace(/\D/g, '');
+
+    let uf = prompt('Informe a UF da OAB:', 'SP');
+    if (uf === null) return;
+    uf = (uf || '').trim().toUpperCase();
+
+    if (!oab || !uf) {
+        alert('Número OAB e estado são obrigatórios.');
+        return;
+    }
+
+    const fd = new FormData();
+    fd.append('oab_number', oab);
+    fd.append('oab_state', uf);
+    postSync(APP_BASE_PATH + '/api/cnj/sync', btn, 'Importando...', fd);
+}
+
+document.getElementById('btnImportProcesses')?.addEventListener('click', function(){ askOabAndImport(this); });
+document.getElementById('btnSyncRegistered')?.addEventListener('click', function(){ postSync(APP_BASE_PATH + '/api/processes/sync-registered', this, 'Sincronizando...'); });
+</script>

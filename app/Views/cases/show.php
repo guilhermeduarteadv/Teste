@@ -12,14 +12,19 @@ use App\Helpers\DateHelper;
         </ol></nav>
     </div>
     <div class="d-flex gap-2">
-        <?php if (!empty($case['numero_cnj'])): ?>
+        <?php if (!empty($case['numero_cnj']) && empty($case['segredo_justica'])): ?>
         <form method="POST" action="/cases/<?= $case['id'] ?>/sync" class="d-inline">
             <input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token ?? '', ENT_QUOTES, 'UTF-8') ?>">
             <button type="submit" class="btn btn-sm btn-outline-info" title="Sincronizar CNJ">
                 <i class="fas fa-sync me-1"></i>Sincronizar CNJ
             </button>
         </form>
+        <?php elseif (!empty($case['segredo_justica'])): ?>
+        <button type="button" class="btn btn-sm btn-outline-dark" disabled title="Sincronização bloqueada por segredo de justiça">
+            <i class="fas fa-lock me-1"></i>Segredo de justiça
+        </button>
         <?php endif; ?>
+        <a href="/cases/<?= $case['id'] ?>/timeline" class="btn btn-sm btn-outline-primary"><i class="fas fa-stream me-1"></i>Linha do tempo</a>
         <a href="/cases/<?= $case['id'] ?>/edit" class="btn btn-sm btn-outline-secondary"><i class="fas fa-edit me-1"></i>Editar</a>
         <a href="/cases" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Voltar</a>
     </div>
@@ -40,6 +45,7 @@ use App\Helpers\DateHelper;
                     <tr><td class="text-muted small">Fase</td><td class="small"><?= htmlspecialchars($case['fase_processual'] ?: '—', ENT_QUOTES, 'UTF-8') ?></td></tr>
                     <tr><td class="text-muted small">Valor da Causa</td><td class="small fw-semibold"><?= FormatHelper::money((float)($case['valor_causa'] ?? 0)) ?></td></tr>
                     <tr><td class="text-muted small">Status</td><td><?= FormatHelper::statusBadge($case['status'] ?? 'ativo') ?></td></tr>
+                    <tr><td class="text-muted small">Segredo de justiça</td><td class="small"><?= !empty($case['segredo_justica']) ? '<span class="badge bg-dark"><i class="fas fa-lock me-1"></i>Sim</span>' : 'Não' ?></td></tr>
                     <tr><td class="text-muted small">Risco</td><td class="small"><?= !empty($case['risco_processual']) ? ucfirst($case['risco_processual']) : '—' ?></td></tr>
                     <tr><td class="text-muted small">Êxito</td><td class="small"><?= !empty($case['probabilidade_exito']) ? ucfirst($case['probabilidade_exito']) : '—' ?></td></tr>
                     <tr><td class="text-muted small">Responsável</td><td class="small"><?= htmlspecialchars($case['responsavel_name'] ?? '—', ENT_QUOTES, 'UTF-8') ?></td></tr>
@@ -65,6 +71,27 @@ use App\Helpers\DateHelper;
                 <?php endif; ?>
             </div>
         </div>
+
+
+        <?php if (!empty($case['parte_contraria_nome']) || !empty($case['parte_contraria_cpf_cnpj']) || !empty($case['parte_contraria_advogado'])): ?>
+        <div class="card mb-3">
+            <div class="card-header"><i class="fas fa-user-shield me-2 text-danger"></i>Parte Contrária</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tr><td class="text-muted small">Nome/Razão Social</td><td class="small"><?= htmlspecialchars($case['parte_contraria_nome'] ?: '—', ENT_QUOTES, 'UTF-8') ?></td></tr>
+                    <tr><td class="text-muted small">Tipo</td><td class="small"><?= htmlspecialchars($case['parte_contraria_tipo_pessoa'] ?: '—', ENT_QUOTES, 'UTF-8') ?></td></tr>
+                    <tr><td class="text-muted small">CPF/CNPJ</td><td class="small"><?= htmlspecialchars($case['parte_contraria_cpf_cnpj'] ?: '—', ENT_QUOTES, 'UTF-8') ?></td></tr>
+                    <tr><td class="text-muted small">RG/IE</td><td class="small"><?= htmlspecialchars($case['parte_contraria_rg_ie'] ?: '—', ENT_QUOTES, 'UTF-8') ?></td></tr>
+                    <tr><td class="text-muted small">Telefone</td><td class="small"><?= htmlspecialchars($case['parte_contraria_telefone'] ?: '—', ENT_QUOTES, 'UTF-8') ?></td></tr>
+                    <tr><td class="text-muted small">E-mail</td><td class="small"><?= htmlspecialchars($case['parte_contraria_email'] ?: '—', ENT_QUOTES, 'UTF-8') ?></td></tr>
+                    <tr><td class="text-muted small">Endereço</td><td class="small"><?= htmlspecialchars(trim(($case['parte_contraria_endereco'] ?? '') . ', ' . ($case['parte_contraria_numero'] ?? '') . ' ' . ($case['parte_contraria_complemento'] ?? '') . ' - ' . ($case['parte_contraria_bairro'] ?? '') . ' - ' . ($case['parte_contraria_cidade'] ?? '') . '/' . ($case['parte_contraria_estado'] ?? '') . ' CEP ' . ($case['parte_contraria_cep'] ?? '')), ENT_QUOTES, 'UTF-8') ?></td></tr>
+                    <tr><td class="text-muted small">Advogado</td><td class="small"><?= htmlspecialchars($case['parte_contraria_advogado'] ?: '—', ENT_QUOTES, 'UTF-8') ?></td></tr>
+                    <tr><td class="text-muted small">OAB</td><td class="small"><?= htmlspecialchars($case['parte_contraria_advogado_oab'] ?: '—', ENT_QUOTES, 'UTF-8') ?></td></tr>
+                    <?php if (!empty($case['parte_contraria_observacoes'])): ?><tr><td class="text-muted small">Obs.</td><td class="small"><?= nl2br(htmlspecialchars($case['parte_contraria_observacoes'], ENT_QUOTES, 'UTF-8')) ?></td></tr><?php endif; ?>
+                </table>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <?php if (!empty($case['proxima_providencia'])): ?>
         <div class="card">
@@ -276,6 +303,30 @@ use App\Helpers\DateHelper;
     </div>
 </div>
 
+
+<div class="row g-4 mt-1">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center"><span><i class="fas fa-address-book me-2"></i>Contatos do Processo</span><button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#contactModal">Adicionar</button></div>
+            <div class="card-body p-0">
+                <?php if (empty($caseContacts ?? [])): ?><div class="text-center text-muted py-3 small">Nenhum contato adicional cadastrado.</div><?php else: ?>
+                <table class="table table-sm mb-0"><thead><tr><th>Nome</th><th>Tipo</th><th>Contato</th></tr></thead><tbody><?php foreach($caseContacts as $ct): ?><tr><td><?= htmlspecialchars($ct['nome']) ?></td><td><?= htmlspecialchars($ct['tipo']) ?></td><td class="small"><?= htmlspecialchars(trim(($ct['telefone']??'').' '.($ct['email']??''))) ?></td></tr><?php endforeach; ?></tbody></table>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center"><span><i class="fas fa-user-friends me-2"></i>Testemunhas</span><button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#witnessModal">Adicionar</button></div>
+            <div class="card-body p-0">
+                <?php if (empty($caseWitnesses ?? [])): ?><div class="text-center text-muted py-3 small">Nenhuma testemunha cadastrada.</div><?php else: ?>
+                <table class="table table-sm mb-0"><thead><tr><th>Nome</th><th>Status</th><th>Resumo</th></tr></thead><tbody><?php foreach($caseWitnesses as $wt): ?><tr><td><?= htmlspecialchars($wt['nome']) ?></td><td><span class="badge bg-secondary"><?= htmlspecialchars($wt['status']) ?></span></td><td class="small"><?= htmlspecialchars(mb_substr($wt['resumo_depoimento'] ?? '',0,80)) ?></td></tr><?php endforeach; ?></tbody></table>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Add Movement Modal -->
 <div class="modal fade" id="movementModal" tabindex="-1">
     <div class="modal-dialog">
@@ -395,3 +446,8 @@ use App\Helpers\DateHelper;
         </div>
     </div>
 </div>
+
+
+<div class="modal fade" id="contactModal" tabindex="-1"><div class="modal-dialog"><form class="modal-content" method="POST" action="/cases/<?= $case['id'] ?>/contacts/add"><input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token ?? '') ?>"><div class="modal-header"><h5>Adicionar Contato</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-2"><div class="col-8"><label class="form-label">Nome</label><input name="nome" class="form-control" required></div><div class="col-4"><label class="form-label">Tipo</label><input name="tipo" class="form-control" placeholder="perito, contador..."></div><div class="col-6"><label class="form-label">Telefone</label><input name="telefone" class="form-control"></div><div class="col-6"><label class="form-label">E-mail</label><input name="email" class="form-control"></div><div class="col-12"><label class="form-label">Documento</label><input name="documento" class="form-control"></div><div class="col-12"><label class="form-label">Endereço</label><textarea name="endereco" class="form-control" rows="2"></textarea></div><div class="col-12"><label class="form-label">Observações</label><textarea name="observacoes" class="form-control" rows="3"></textarea></div></div></div><div class="modal-footer"><button class="btn btn-primary">Salvar</button></div></form></div></div>
+
+<div class="modal fade" id="witnessModal" tabindex="-1"><div class="modal-dialog"><form class="modal-content" method="POST" action="/cases/<?= $case['id'] ?>/witnesses/add"><input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token ?? '') ?>"><div class="modal-header"><h5>Adicionar Testemunha</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-2"><div class="col-8"><label class="form-label">Nome</label><input name="nome" class="form-control" required></div><div class="col-4"><label class="form-label">Status</label><select name="status" class="form-select"><option value="a_arrolar">A arrolar</option><option value="arrolada">Arrolada</option><option value="intimada">Intimada</option><option value="ouvida">Ouvida</option><option value="dispensada">Dispensada</option></select></div><div class="col-6"><label class="form-label">Telefone</label><input name="telefone" class="form-control"></div><div class="col-6"><label class="form-label">E-mail</label><input name="email" class="form-control"></div><div class="col-12"><label class="form-label">Documento</label><input name="documento" class="form-control"></div><div class="col-12"><label class="form-label">Endereço</label><textarea name="endereco" class="form-control" rows="2"></textarea></div><div class="col-12"><label class="form-label">Resumo do depoimento esperado</label><textarea name="resumo_depoimento" class="form-control" rows="3"></textarea></div></div></div><div class="modal-footer"><button class="btn btn-primary">Salvar</button></div></form></div></div>

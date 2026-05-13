@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS tribunal_connections (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    tribunal VARCHAR(30) NOT NULL DEFAULT 'tjsp',
+    sistema VARCHAR(30) NOT NULL DEFAULT 'eproc',
+    username VARCHAR(190) NULL,
+    encrypted_password LONGTEXT NULL,
+    encrypted_cookies LONGTEXT NULL,
+    oab_number VARCHAR(30) NULL,
+    oab_state VARCHAR(2) NULL,
+    has_password TINYINT(1) NOT NULL DEFAULT 0,
+    has_cookies TINYINT(1) NOT NULL DEFAULT 0,
+    status VARCHAR(30) NOT NULL DEFAULT 'pendente',
+    last_test_at DATETIME NULL,
+    last_sync_at DATETIME NULL,
+    last_error TEXT NULL,
+    expires_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_user_tribunal_sistema (user_id, tribunal, sistema),
+    INDEX idx_user_status (user_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

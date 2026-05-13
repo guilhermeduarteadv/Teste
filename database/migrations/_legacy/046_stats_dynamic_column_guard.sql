@@ -1,0 +1,3 @@
+-- v46: Estatísticas dinâmicas com detecção de colunas.
+-- Nenhum SQL obrigatório.
+-- Corrige erro quando financial_entries ainda não possui consultancy_id/administrative_procedure_id/entity_type.

@@ -169,7 +169,7 @@ document.querySelectorAll('.btn-complete-task').forEach(btn => {
     btn.addEventListener('click', () => {
         if (!confirm('Marcar tarefa como concluída?')) return;
         const form = document.getElementById('taskActionForm');
-        form.action = `/tasks/${btn.dataset.id}/complete`;
+        form.action = `${APP_BASE_PATH}/tasks/${btn.dataset.id}/complete`;
         form.submit();
     });
 });
@@ -177,7 +177,7 @@ document.querySelectorAll('.btn-delete-task').forEach(btn => {
     btn.addEventListener('click', () => {
         if (!confirm('Excluir esta tarefa?')) return;
         const form = document.getElementById('taskActionForm');
-        form.action = `/tasks/${btn.dataset.id}/delete`;
+        form.action = `${APP_BASE_PATH}/tasks/${btn.dataset.id}/delete`;
         form.submit();
     });
 });

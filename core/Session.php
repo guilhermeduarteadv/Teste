@@ -5,6 +5,22 @@ namespace Core;
 
 class Session
 {
+    private static function normalizeCookiePath(string $path): string
+    {
+        $path = str_replace('\\', '/', $path);
+        if ($path === '' || $path === '/' || preg_match('/^[A-Z]:\//i', $path)) {
+            return '/';
+        }
+        $pos = stripos($path, '/public');
+        if ($pos !== false) {
+            $path = substr($path, $pos);
+        }
+        if ($path[0] !== '/') {
+            $path = '/' . $path;
+        }
+        return rtrim($path, '/') . '/';
+    }
+
     private static $started = false;
 
     public static function start(array $config = []): void
@@ -16,7 +32,7 @@ class Session
         $lifetime = $config['lifetime'] ?? 120;
         session_name($name);
         // samesite in array form requires PHP 7.3+; use ini_set for compatibility
-        $cookiePath = (defined('APP_BASE_PATH') && APP_BASE_PATH !== '') ? APP_BASE_PATH . '/' : '/';
+        $cookiePath = self::normalizeCookiePath(defined('APP_BASE_PATH') ? APP_BASE_PATH : '');
         if (PHP_VERSION_ID >= 70300) {
             session_set_cookie_params([
                 'lifetime' => $lifetime * 60,

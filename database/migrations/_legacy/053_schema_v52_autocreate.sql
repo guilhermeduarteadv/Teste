@@ -1,0 +1,3 @@
+-- v53
+-- Nenhum SQL obrigatório.
+-- SchemaGuardService agora cria automaticamente as tabelas da v52 antes dos módulos consultarem o banco.

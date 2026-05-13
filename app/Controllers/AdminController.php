@@ -10,6 +10,8 @@ use App\Models\UserModel;
 use App\Models\SettingModel;
 use App\Models\SystemLogModel;
 use App\Services\SystemLogService;
+use App\Services\TribunalPreferenceService;
+use App\Services\SchemaGuardService;
 use App\Helpers\SecurityHelper;
 use App\Helpers\ValidationHelper;
 
@@ -224,32 +226,52 @@ class AdminController extends Controller
     public function deleteUser(string $id): void
     {
         $this->requireAdmin();
-        $this->validateCsrf();
-
-        $currentUser = Session::get('user');
-        if ((int)$id === (int)$currentUser['id']) {
-            Session::flash('error', 'Você não pode excluir sua própria conta.');
-            $this->redirect('/admin/users');
-            return;
-        }
-
-        $user = $this->userModel->findById((int)$id);
-        if (!$user) {
-            Session::flash('error', 'Usuário não encontrado.');
-            $this->redirect('/admin/users');
-            return;
-        }
+        $wantsJson = (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
+            || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
 
         try {
-            $this->userModel->softDelete((int)$id);
-            SystemLogService::delete('users', 'user', (int)$id, "Usuário excluído: {$user['name']}");
-            Session::flash('success', 'Usuário excluído com sucesso.');
-        } catch (\Exception $e) {
-            Logger::error('User deletion failed: ' . $e->getMessage());
-            Session::flash('error', 'Erro ao excluir usuário.');
-        }
+            $this->validateCsrf();
 
-        $this->redirect('/admin/users');
+            $userId = (int)$id;
+            $currentUser = Session::get('user');
+
+            if ($userId <= 0) {
+                throw new \RuntimeException('Usuário inválido.');
+            }
+
+            if ($currentUser && $userId === (int)$currentUser['id']) {
+                throw new \RuntimeException('Você não pode excluir sua própria conta.');
+            }
+
+            $user = $this->userModel->findById($userId);
+            if (!$user) {
+                throw new \RuntimeException('Usuário não encontrado ou já excluído.');
+            }
+
+            $deleted = $this->userModel->softDelete($userId);
+            if (!$deleted) {
+                throw new \RuntimeException('Não foi possível excluir o usuário.');
+            }
+
+            SystemLogService::delete('users', 'user', $userId, "Usuário excluído: {$user['name']}");
+
+            if ($wantsJson) {
+                $this->json(['success' => true, 'message' => 'Usuário excluído com sucesso.']);
+            }
+
+            Session::flash('success', 'Usuário excluído com sucesso.');
+            $this->redirect('/admin/users');
+
+        } catch (\Throwable $e) {
+            Logger::error('User deletion failed: ' . $e->getMessage());
+
+            if ($wantsJson) {
+                $this->json(['success' => false, 'message' => $e->getMessage()], 400);
+            }
+
+            Session::flash('error', $e->getMessage());
+            $this->redirect('/admin/users');
+        }
     }
 
     public function logs(): void
@@ -272,6 +294,33 @@ class AdminController extends Controller
             'filters'    => $filters,
             'csrf_token' => Session::csrfToken(),
         ]);
+    }
+
+
+    public function tribunals(): void
+    {
+        $this->requireAdmin();
+        (new SchemaGuardService())->ensureV49Schema();
+        $service = new TribunalPreferenceService();
+
+        $this->render('admin/tribunals', [
+            'title' => 'Tribunais - Administração',
+            'knownTribunals' => $service->allKnown(),
+            'enabledTribunals' => $service->enabled(),
+            'csrf_token' => Session::csrfToken(),
+        ]);
+    }
+
+    public function updateTribunals(): void
+    {
+        $this->requireAdmin();
+        $this->validateCsrf();
+
+        $codes = $_POST['tribunais'] ?? [];
+        (new TribunalPreferenceService())->save($codes);
+
+        Session::flash('success', 'Tribunais atualizados com sucesso.');
+        $this->redirect('/admin/tribunals');
     }
 
     public function settings(): void

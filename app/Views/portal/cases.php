@@ -58,6 +58,45 @@
             <div class="text-muted" style="font-size:0.72rem;"><?= DateHelper::formatBrDateTime($case['last_movement']['data_movimento'] ?? '') ?></div>
         </div>
         <?php endif; ?>
+        <div class="mt-3 timeline-inline-v41">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong class="small"><i class="fas fa-stream me-1"></i>Linha do tempo</strong>
+                <span class="badge bg-primary"><?= (int)($case['timeline_progress'] ?? 0) ?>%</span>
+            </div>
+
+            <div class="progress mb-3" style="height: 8px;">
+                <div class="progress-bar" style="width: <?= (int)($case['timeline_progress'] ?? 0) ?>%;"></div>
+            </div>
+
+            <?php if (empty($case['timeline_preview'])): ?>
+                <div class="alert alert-light border small mb-2">
+                    Ainda não há eventos de linha do tempo disponíveis para este processo.
+                </div>
+            <?php else: ?>
+                <div class="list-group list-group-flush border rounded">
+                    <?php foreach ($case['timeline_preview'] as $event): ?>
+                        <div class="list-group-item px-2 py-2">
+                            <div class="d-flex justify-content-between">
+                                <strong class="small"><?= htmlspecialchars($event['title'] ?? 'Evento', ENT_QUOTES, 'UTF-8') ?></strong>
+                                <span class="text-muted" style="font-size:0.72rem;">
+                                    <?= !empty($event['event_date']) ? date('d/m/Y', strtotime($event['event_date'])) : '' ?>
+                                </span>
+                            </div>
+                            <div class="small text-muted">
+                                <?= htmlspecialchars($event['client_description'] ?? $event['description'] ?? 'Atualização processual.', ENT_QUOTES, 'UTF-8') ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <div class="mt-2">
+                <a href="/portal/cases/<?= $case['id'] ?>/timeline" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-stream me-1"></i>Ver linha do tempo completa
+                </a>
+            </div>
+        </div>
+
     </div>
 </div>
 <?php endforeach; ?>

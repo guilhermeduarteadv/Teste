@@ -13,7 +13,7 @@ class AuthMiddleware
         if (!Session::isLoggedIn()) {
             Session::flash('error', 'Sua sessão expirou. Faça login novamente.');
             Logger::security('Acesso não autenticado bloqueado', ['uri' => $_SERVER['REQUEST_URI'] ?? '']);
-            header('Location: /login');
+            header('Location: ' . ((defined('APP_BASE_PATH') && APP_BASE_PATH !== '') ? APP_BASE_PATH : '') . '/login');
             exit;
         }
 
@@ -21,7 +21,7 @@ class AuthMiddleware
         if (!$user || ($user['status'] ?? '') !== 'active') {
             Session::destroy();
             Session::flash('error', 'Conta inativa ou bloqueada. Entre em contato com o administrador.');
-            header('Location: /login');
+            header('Location: ' . ((defined('APP_BASE_PATH') && APP_BASE_PATH !== '') ? APP_BASE_PATH : '') . '/login');
             exit;
         }
 
@@ -30,7 +30,7 @@ class AuthMiddleware
         $timeout = (int)($_ENV['SESSION_LIFETIME'] ?? 120) * 60;
         if (time() - $lastActivity > $timeout) {
             Session::destroy();
-            header('Location: /login?expired=1');
+            header('Location: ' . ((defined('APP_BASE_PATH') && APP_BASE_PATH !== '') ? APP_BASE_PATH : '') . '/login?expired=1');
             exit;
         }
         Session::set('_last_activity', time());

@@ -4,12 +4,15 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use Core\Controller;
+use App\Services\SchemaGuardService;
 use Core\Session;
 use Core\Logger;
 use App\Models\ClientModel;
 use App\Models\CaseModel;
 use App\Models\FinancialModel;
 use App\Models\DocumentModel;
+use App\Services\TimelineService;
+use Core\Database;
 
 class PortalController extends Controller
 {
@@ -20,6 +23,7 @@ class PortalController extends Controller
 
     public function __construct()
     {
+        (new SchemaGuardService())->ensureV42Schema();
         $this->clientModel    = new ClientModel();
         $this->caseModel      = new CaseModel();
         $this->financialModel = new FinancialModel();
@@ -49,7 +53,7 @@ class PortalController extends Controller
         if (Session::get('portal_client')) {
             $this->redirect('/portal/cases');
         }
-        $this->render('portal.login', [
+        $this->render('portal/login', [
             'title'      => 'Portal do Cliente - JurisControl',
             'csrf_token' => Session::csrfToken(),
             'error'      => Session::getFlash('error'),
@@ -70,10 +74,7 @@ class PortalController extends Controller
         }
 
         // Find client by email
-        $client = $this->clientModel->queryOne(
-            "SELECT * FROM clients WHERE email = ? AND portal_access = 1 AND deleted_at IS NULL LIMIT 1",
-            [$email]
-        );
+        $client = $this->clientModel->queryOne("SELECT * FROM clients WHERE email = ? AND portal_access = 1 AND deleted_at IS NULL LIMIT 1",[$email]);
 
         if (!$client || !password_verify($password, $client['portal_password'] ?? '')) {
             Logger::security('Portal login failed', ['email' => $email]);
@@ -107,20 +108,175 @@ class PortalController extends Controller
 
         // Filter to only show visible info
         $casesFiltered = [];
+        $timelineService = new TimelineService();
+
         foreach ($cases as $case) {
             $movements = $this->caseModel->queryOne(
                 "SELECT cm.* FROM case_movements cm WHERE cm.case_id = ? AND cm.visivel_cliente = 1 ORDER BY cm.data_movimento DESC LIMIT 3",
                 [$case['id']]
             );
+
             $case['last_movement'] = $movements;
+
+            try {
+                $timelineService->rebuildCaseTimeline((int)$case['id']);
+                $case['timeline_preview'] = array_slice(
+                    $timelineService->getCaseTimeline((int)$case['id'], true),
+                    -5
+                );
+                $case['timeline_progress'] = $timelineService->calculateCaseProgress((int)$case['id']);
+            } catch (\Throwable $e) {
+                $case['timeline_preview'] = [];
+                $case['timeline_progress'] = 0;
+            }
+
             $casesFiltered[] = $case;
         }
 
-        $this->render('portal.cases', [
+        $this->render('portal/cases', [
             'title'  => 'Meus Processos - Portal do Cliente',
             'client' => $client,
             'cases'  => $casesFiltered,
         ], 'portal');
+    }
+
+
+    public function caseTimeline(string $caseId): void
+    {
+        $client = $this->requirePortalAuth();
+        $caseId = (int)$caseId;
+
+        $db = Database::getInstance();
+
+        $stmt = $db->prepare("
+            SELECT c.*
+            FROM cases c
+            INNER JOIN case_clients cc ON cc.case_id = c.id
+            WHERE c.id = ?
+              AND cc.client_id = ?
+              AND c.deleted_at IS NULL
+            LIMIT 1
+        ");
+        $stmt->execute([$caseId, (int)$client['id']]);
+        $case = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$case) {
+            \Core\Session::flash('error', 'Processo não encontrado no portal.');
+            $this->redirect('/portal/cases');
+            return;
+        }
+
+        $service = new TimelineService();
+        $service->rebuildCaseTimeline($caseId);
+        $timeline = $service->getCaseTimeline($caseId, true);
+        $progress = $service->calculateCaseProgress($caseId);
+
+        $this->render('portal/case_timeline', [
+            'title' => 'Linha do tempo - Portal do Cliente',
+            'client' => $client,
+            'case' => $case,
+            'timeline' => $timeline,
+            'progress' => $progress,
+        ], 'portal');
+    }
+
+
+    public function uploadDocument(): void
+    {
+        $client = $this->requirePortalAuth();
+
+        if (!isset($_FILES['document']) || $_FILES['document']['error'] !== UPLOAD_ERR_OK) {
+            Session::flash('error', 'Nenhum arquivo enviado ou erro no upload.');
+            $this->redirect('/portal/documents');
+            return;
+        }
+
+        $file = $_FILES['document'];
+        $maxTotal = 10 * 1024 * 1024;
+
+        $db = Database::getInstance();
+        $sizeColumn = $this->tableColumnExists('documents', 'tamanho_bytes') ? 'tamanho_bytes' : 'size';
+        $clientColumn = $this->tableColumnExists('documents', 'uploaded_by_client_id') ? 'uploaded_by_client_id' : 'entity_id';
+
+        $stmt = $db->prepare("SELECT COALESCE(SUM({$sizeColumn}),0) FROM documents WHERE {$clientColumn} = ? AND deleted_at IS NULL");
+        $stmt->execute([(int)$client['id']]);
+        $used = (int)$stmt->fetchColumn();
+
+        if ($used + (int)$file['size'] > $maxTotal) {
+            Session::flash('error', 'Limite total de 10MB excedido. Arquivos maiores devem ser enviados por e-mail.');
+            $this->redirect('/portal/documents');
+            return;
+        }
+
+        $allowed = ['pdf','jpg','jpeg','png','doc','docx'];
+        $originalName = $file['name'];
+        $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+        if (!in_array($extension, $allowed, true)) {
+            Session::flash('error', 'Extensão não permitida. Permitido: PDF, JPG, PNG, DOC e DOCX.');
+            $this->redirect('/portal/documents');
+            return;
+        }
+
+        $category = trim($_POST['categoria'] ?? 'documentos_cliente');
+        $storageDir = ROOT_PATH . '/storage/client_uploads/' . (int)$client['id'];
+        if (!is_dir($storageDir)) {
+            mkdir($storageDir, 0775, true);
+        }
+
+        $safeName = date('YmdHis') . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
+        $dest = $storageDir . '/' . $safeName;
+
+        if (!move_uploaded_file($file['tmp_name'], $dest)) {
+            Session::flash('error', 'Falha ao salvar o arquivo.');
+            $this->redirect('/portal/documents');
+            return;
+        }
+
+        $relative = 'storage/client_uploads/' . (int)$client['id'] . '/' . $safeName;
+
+        $hasTamanho = $this->tableColumnExists('documents', 'tamanho_bytes');
+        $hasUploadedClient = $this->tableColumnExists('documents', 'uploaded_by_client_id');
+        $hasOrigemUpload = $this->tableColumnExists('documents', 'origem_upload');
+
+        $columns = ['title', 'filename', 'original_name', 'path', 'mime_type', 'size', 'categoria', 'entity_type', 'entity_id', 'visivel_cliente', 'created_at', 'updated_at'];
+        $values = [
+            trim($_POST['title'] ?? $originalName),
+            $safeName,
+            $originalName,
+            $relative,
+            $file['type'] ?? '',
+            (int)$file['size'],
+            $category,
+            'client',
+            (int)$client['id'],
+            1,
+            date('Y-m-d H:i:s'),
+            date('Y-m-d H:i:s')
+        ];
+
+        if ($hasTamanho) {
+            $columns[] = 'tamanho_bytes';
+            $values[] = (int)$file['size'];
+        }
+
+        if ($hasUploadedClient) {
+            $columns[] = 'uploaded_by_client_id';
+            $values[] = (int)$client['id'];
+        }
+
+        if ($hasOrigemUpload) {
+            $columns[] = 'origem_upload';
+            $values[] = 'portal_cliente';
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($columns), '?'));
+        $sql = "INSERT INTO documents (" . implode(', ', $columns) . ") VALUES ({$placeholders})";
+        $stmt = $db->prepare($sql);
+        $stmt->execute($values);
+
+        Session::flash('success', 'Documento enviado com sucesso.');
+        $this->redirect('/portal/documents');
     }
 
     public function financial(): void
@@ -136,7 +292,7 @@ class PortalController extends Controller
 
         $summary = $this->financialModel->getClientFinancialSummary($client['id']);
 
-        $this->render('portal.financial', [
+        $this->render('portal/financial', [
             'title'   => 'Financeiro - Portal do Cliente',
             'client'  => $client,
             'entries' => $entries,
@@ -148,18 +304,36 @@ class PortalController extends Controller
     {
         $client    = $this->requirePortalAuth();
         $documents = $this->documentModel->query(
-            "SELECT d.*, u.name AS uploaded_by_name
+            "SELECT DISTINCT d.*, u.name AS uploaded_by_name
              FROM documents d
              LEFT JOIN users u ON d.uploaded_by = u.id
-             WHERE d.entity_type = 'client' AND d.entity_id = ? AND d.visivel_cliente = 1 AND d.deleted_at IS NULL
+             LEFT JOIN case_clients cc ON d.entity_type = 'case' AND d.entity_id = cc.case_id
+             WHERE d.deleted_at IS NULL
+               AND d.visivel_cliente = 1
+               AND (
+                    (d.entity_type = 'client' AND d.entity_id = ?)
+                    OR (cc.client_id = ?)
+                    OR (d.uploaded_by_client_id = ?)
+               )
              ORDER BY d.created_at DESC",
-            [$client['id']]
+            [(int)$client['id'], (int)$client['id'], (int)$client['id']]
         );
 
-        $this->render('portal.documents', [
+        $db = Database::getInstance();
+        $sizeColumn = $this->tableColumnExists('documents', 'tamanho_bytes') ? 'tamanho_bytes' : 'size';
+        $clientColumn = $this->tableColumnExists('documents', 'uploaded_by_client_id') ? 'uploaded_by_client_id' : 'entity_id';
+
+        $stmt = $db->prepare("SELECT COALESCE(SUM({$sizeColumn}),0) FROM documents WHERE {$clientColumn} = ? AND deleted_at IS NULL");
+        $stmt->execute([(int)$client['id']]);
+        $usedBytes = (int)$stmt->fetchColumn();
+        $limitBytes = 10 * 1024 * 1024;
+
+        $this->render('portal/documents', [
             'title'     => 'Documentos - Portal do Cliente',
             'client'    => $client,
             'documents' => $documents,
+            'usedBytes' => $usedBytes,
+            'limitBytes' => $limitBytes,
         ], 'portal');
     }
 
@@ -174,7 +348,13 @@ class PortalController extends Controller
             [$id, $client['id']]
         );
 
-        if (!$doc || !file_exists($doc['path'])) {
+        if (!$doc) {
+            http_response_code(404);
+            echo 'Documento não encontrado.';
+            return;
+        }
+        $filePath = ROOT_PATH . '/storage/documents/' . $doc['path'];
+        if (!file_exists($filePath)) {
             http_response_code(404);
             echo 'Documento não encontrado.';
             return;
@@ -184,8 +364,41 @@ class PortalController extends Controller
 
         header('Content-Type: ' . $doc['mime_type']);
         header('Content-Disposition: attachment; filename="' . $doc['original_name'] . '"');
-        header('Content-Length: ' . filesize($doc['path']));
-        readfile($doc['path']);
+        header('Content-Length: ' . filesize($filePath));
+        readfile($filePath);
         exit;
     }
+
+    private function tableColumnExists(string $table, string $column): bool
+    {
+        try {
+            $db = Database::getInstance();
+            $stmt = $db->prepare("SHOW COLUMNS FROM {$table} LIKE ?");
+            $stmt->execute([$column]);
+            return (bool)$stmt->fetch(\PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+
+    public function clientRequestsPortal(): void
+    {
+        $client = $this->requirePortalAuth();
+        $db = \Core\Database::getInstance();
+        try {
+            $items = $db->prepare("SELECT * FROM client_requests WHERE client_id = ? AND visible_client = 1 ORDER BY created_at DESC");
+            $items->execute([(int)$client['id']]);
+            $requests = $items->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            $requests = [];
+        }
+
+        $this->render('portal/client_requests', [
+            'title' => 'Pendências - Portal do Cliente',
+            'client' => $client,
+            'requests' => $requests,
+        ], 'portal');
+    }
+
 }

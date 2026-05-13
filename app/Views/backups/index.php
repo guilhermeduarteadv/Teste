@@ -1,0 +1,6 @@
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h4 class="fw-bold mb-0">Backup e Restauração</h4><div class="text-muted">Gere cópias SQL do banco de dados antes de atualizações ou manutenção.</div></div><form method="POST" action="/backups/create"><input type="hidden" name="_csrf_token" value="<?= htmlspecialchars($csrf_token ?? '') ?>"><button class="btn btn-primary"><i class="fas fa-download me-1"></i>Gerar backup SQL</button></form></div>
+<div class="alert alert-warning small"><strong>Atenção:</strong> este backup cobre o banco de dados. Arquivos enviados ficam em <code>storage/</code> e devem ser copiados também para backup completo.</div>
+<div class="card"><div class="card-body p-0"><table class="table mb-0"><thead><tr><th>Arquivo</th><th>Tamanho</th><th>Data</th><th></th></tr></thead><tbody>
+<?php if(empty($backups)): ?><tr><td colspan="4" class="text-center text-muted py-4">Nenhum backup gerado.</td></tr><?php endif; ?>
+<?php foreach($backups as $b): ?><tr><td><?= htmlspecialchars($b['filename']) ?></td><td><?= number_format(($b['size_bytes']??0)/1024,1,',','.') ?> KB</td><td><?= htmlspecialchars($b['created_at']) ?></td><td class="text-end"><a class="btn btn-sm btn-outline-primary" href="/backups/<?= $b['id'] ?>/download">Baixar</a></td></tr><?php endforeach; ?>
+</tbody></table></div></div>
