@@ -174,6 +174,19 @@ $isActive = function(string $path) use ($currentUri): string {
             <i class="fas fa-file-alt"></i> Modelos
         </a>
 
+        <div class="nav-section">Jurídico</div>
+        <a href="/deadlines" class="nav-link <?= $isActive('/deadlines') ?>">
+            <i class="fas fa-hourglass-half"></i> Prazos
+        </a>
+
+        <div class="nav-section">Conhecimento</div>
+        <a href="/knowledge/jurisprudence" class="nav-link <?= $isActive('/knowledge/jurisprudence') ?>">
+            <i class="fas fa-book-open"></i> Jurisprudência
+        </a>
+        <a href="/knowledge/theses" class="nav-link <?= $isActive('/knowledge/theses') ?>">
+            <i class="fas fa-scroll"></i> Teses
+        </a>
+
         <div class="nav-section">Análise</div>
         <a href="/reports" class="nav-link <?= $isActive('/reports') ?>">
             <i class="fas fa-chart-bar"></i> Relatórios

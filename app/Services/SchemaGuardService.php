@@ -635,6 +635,148 @@ class SchemaGuardService
         try { $this->ensureSystemCheckTables(); } catch (\Throwable $e) {}
         try { $this->ensureNotificationsTable(); } catch (\Throwable $e) {}
         try { $this->ensureDashboardTables(); } catch (\Throwable $e) {}
+        try { $this->ensurePhase3Tables(); } catch (\Throwable $e) {}
+        try { $this->ensureDeadlinePhase3Columns(); } catch (\Throwable $e) {}
+    }
+
+    /**
+     * Phase 3+5: cria tabelas dos módulos Provas (2.11), Estratégia (2.12),
+     * Prazos (2.5) e Jurisprudência (2.18).
+     */
+    public function ensurePhase3Tables(): void
+    {
+        // 2.11 — Provas
+        $this->db->exec("
+            CREATE TABLE IF NOT EXISTS case_evidence (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                case_id INT NOT NULL,
+                document_id INT DEFAULT NULL,
+                evidence_type VARCHAR(50) DEFAULT 'documento',
+                title VARCHAR(255) NOT NULL,
+                description TEXT DEFAULT NULL,
+                probative_strength VARCHAR(20) DEFAULT 'media',
+                legal_note VARCHAR(500) DEFAULT NULL,
+                visible_client TINYINT(1) DEFAULT 0,
+                created_by INT DEFAULT NULL,
+                created_at DATETIME DEFAULT NULL,
+                updated_at DATETIME DEFAULT NULL,
+                deleted_at DATETIME DEFAULT NULL,
+                INDEX idx_evidence_case (case_id),
+                INDEX idx_evidence_type (evidence_type)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        // 2.12 — Estratégia Processual
+        $this->db->exec("
+            CREATE TABLE IF NOT EXISTS process_strategy_notes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                case_id INT NOT NULL,
+                tese_principal TEXT DEFAULT NULL,
+                tese_subsidiaria TEXT DEFAULT NULL,
+                riscos TEXT DEFAULT NULL,
+                provas_favoraveis TEXT DEFAULT NULL,
+                provas_desfavoraveis TEXT DEFAULT NULL,
+                proximos_passos TEXT DEFAULT NULL,
+                valor_provavel DECIMAL(15,2) DEFAULT NULL,
+                chance_acordo TINYINT(3) DEFAULT NULL,
+                valor_minimo_acordo DECIMAL(15,2) DEFAULT NULL,
+                observacoes TEXT DEFAULT NULL,
+                internal_only TINYINT(1) DEFAULT 1,
+                created_by INT DEFAULT NULL,
+                created_at DATETIME DEFAULT NULL,
+                updated_at DATETIME DEFAULT NULL,
+                INDEX idx_strategy_case (case_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        // 2.5 — Feriados
+        $this->db->exec("
+            CREATE TABLE IF NOT EXISTS holidays (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                date DATE NOT NULL,
+                name VARCHAR(200) NOT NULL,
+                scope VARCHAR(20) DEFAULT 'nacional',
+                state CHAR(2) DEFAULT NULL,
+                city VARCHAR(100) DEFAULT NULL,
+                active TINYINT(1) DEFAULT 1,
+                created_at DATETIME DEFAULT NULL,
+                updated_at DATETIME DEFAULT NULL,
+                deleted_at DATETIME DEFAULT NULL,
+                INDEX idx_holiday_date (date),
+                INDEX idx_holiday_scope (scope)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        // 2.5 — Suspensões de Prazo
+        $this->db->exec("
+            CREATE TABLE IF NOT EXISTS deadline_suspensions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                start_date DATE NOT NULL,
+                end_date DATE NOT NULL,
+                reason VARCHAR(255) DEFAULT NULL,
+                scope VARCHAR(20) DEFAULT 'nacional',
+                state CHAR(2) DEFAULT NULL,
+                city VARCHAR(100) DEFAULT NULL,
+                active TINYINT(1) DEFAULT 1,
+                created_at DATETIME DEFAULT NULL,
+                INDEX idx_suspension_dates (start_date, end_date)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        // 2.18 — Jurisprudência
+        $this->db->exec("
+            CREATE TABLE IF NOT EXISTS jurisprudence_library (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                court VARCHAR(100) DEFAULT NULL,
+                area VARCHAR(80) DEFAULT NULL,
+                theme VARCHAR(150) DEFAULT NULL,
+                summary TEXT DEFAULT NULL,
+                ementa TEXT DEFAULT NULL,
+                link VARCHAR(500) DEFAULT NULL,
+                decision_date DATE DEFAULT NULL,
+                tags VARCHAR(500) DEFAULT NULL,
+                used_in_case_id INT DEFAULT NULL,
+                created_by INT DEFAULT NULL,
+                created_at DATETIME DEFAULT NULL,
+                updated_at DATETIME DEFAULT NULL,
+                deleted_at DATETIME DEFAULT NULL,
+                INDEX idx_juris_area (area),
+                INDEX idx_juris_court (court)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+
+        // 2.18 — Teses Jurídicas
+        $this->db->exec("
+            CREATE TABLE IF NOT EXISTS legal_theses (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                area VARCHAR(80) DEFAULT NULL,
+                thesis_text TEXT DEFAULT NULL,
+                legal_basis VARCHAR(500) DEFAULT NULL,
+                tags VARCHAR(500) DEFAULT NULL,
+                created_by INT DEFAULT NULL,
+                created_at DATETIME DEFAULT NULL,
+                updated_at DATETIME DEFAULT NULL,
+                deleted_at DATETIME DEFAULT NULL,
+                INDEX idx_thesis_area (area)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+    }
+
+    /**
+     * Garante novas colunas em case_deadlines para o módulo de Prazos (2.5).
+     */
+    private function ensureDeadlinePhase3Columns(): void
+    {
+        $this->addColumnIfMissing('case_deadlines', 'calculation_method', "VARCHAR(20) DEFAULT 'corridos'");
+        $this->addColumnIfMissing('case_deadlines', 'business_days',      "TINYINT(1) DEFAULT 0");
+        $this->addColumnIfMissing('case_deadlines', 'start_count_at',     "DATE NULL");
+        $this->addColumnIfMissing('case_deadlines', 'calculated_at',      "DATETIME NULL");
+        $this->addColumnIfMissing('case_deadlines', 'checked_by',         "INT NULL");
+        $this->addColumnIfMissing('case_deadlines', 'checked_at',         "DATETIME NULL");
+        $this->addColumnIfMissing('case_deadlines', 'source_type',        "VARCHAR(50) NULL");
+        $this->addColumnIfMissing('case_deadlines', 'source_id',          "INT NULL");
     }
 
     public function ensureDashboardTables(): void

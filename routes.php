@@ -250,3 +250,36 @@ $router->post('/checklists', [OfficeModuleController::class, 'checklistStore'], 
 
 $router->get('/client-requests', [OfficeModuleController::class, 'clientRequests'], [AuthMiddleware::class]);
 $router->post('/client-requests', [OfficeModuleController::class, 'clientRequestStore'], [AuthMiddleware::class]);
+
+// Provas (2.11)
+use App\Controllers\EvidenceController;
+$router->get('/cases/{id}/evidence', [EvidenceController::class, 'index'], [AuthMiddleware::class]);
+$router->post('/cases/{id}/evidence/store', [EvidenceController::class, 'store'], [AuthMiddleware::class]);
+$router->get('/evidence/{id}/edit', [EvidenceController::class, 'edit'], [AuthMiddleware::class]);
+$router->post('/evidence/{id}/update', [EvidenceController::class, 'update'], [AuthMiddleware::class]);
+$router->post('/evidence/{id}/delete', [EvidenceController::class, 'delete'], [AuthMiddleware::class]);
+
+// Estratégia Processual (2.12)
+use App\Controllers\CaseStrategyController;
+$router->get('/cases/{id}/strategy', [CaseStrategyController::class, 'show'], [AuthMiddleware::class]);
+$router->post('/cases/{id}/strategy/save', [CaseStrategyController::class, 'save'], [AuthMiddleware::class]);
+
+// Prazos com Cálculo (2.5)
+use App\Controllers\DeadlineController;
+$router->get('/deadlines', [DeadlineController::class, 'index'], [AuthMiddleware::class]);
+$router->post('/deadlines/store', [DeadlineController::class, 'store'], [AuthMiddleware::class]);
+$router->post('/deadlines/{id}/confirm', [DeadlineController::class, 'confirm'], [AuthMiddleware::class]);
+$router->post('/deadlines/calculate', [DeadlineController::class, 'calculate'], [AuthMiddleware::class]);
+
+// Jurisprudência e Teses (2.18)
+use App\Controllers\KnowledgeController;
+$router->get('/knowledge/jurisprudence', [KnowledgeController::class, 'jurisprudence'], [AuthMiddleware::class]);
+$router->post('/knowledge/jurisprudence/store', [KnowledgeController::class, 'storeJurisprudence'], [AuthMiddleware::class]);
+$router->get('/knowledge/jurisprudence/{id}/edit', [KnowledgeController::class, 'editJurisprudence'], [AuthMiddleware::class]);
+$router->post('/knowledge/jurisprudence/{id}/update', [KnowledgeController::class, 'updateJurisprudence'], [AuthMiddleware::class]);
+$router->post('/knowledge/jurisprudence/{id}/delete', [KnowledgeController::class, 'deleteJurisprudence'], [AuthMiddleware::class]);
+$router->get('/knowledge/theses', [KnowledgeController::class, 'theses'], [AuthMiddleware::class]);
+$router->post('/knowledge/theses/store', [KnowledgeController::class, 'storeThesis'], [AuthMiddleware::class]);
+$router->get('/knowledge/theses/{id}/edit', [KnowledgeController::class, 'editThesis'], [AuthMiddleware::class]);
+$router->post('/knowledge/theses/{id}/update', [KnowledgeController::class, 'updateThesis'], [AuthMiddleware::class]);
+$router->post('/knowledge/theses/{id}/delete', [KnowledgeController::class, 'deleteThesis'], [AuthMiddleware::class]);
