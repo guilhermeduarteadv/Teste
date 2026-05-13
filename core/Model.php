@@ -108,14 +108,14 @@ abstract class Model
         ];
     }
 
-    protected function query(string $sql, array $params = []): array
+    public function query(string $sql, array $params = []): array
     {
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
     }
 
-    protected function queryOne(string $sql, array $params = []): ?array
+    public function queryOne(string $sql, array $params = []): ?array
     {
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -123,7 +123,7 @@ abstract class Model
         return $result ?: null;
     }
 
-    protected function execute(string $sql, array $params = []): bool
+    public function execute(string $sql, array $params = []): bool
     {
         $stmt = $this->db->prepare($sql);
         return $stmt->execute($params);
