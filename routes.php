@@ -21,6 +21,7 @@ use App\Controllers\TribunalConnectionController;
 use App\Controllers\DiagnosticController;
 use App\Controllers\BackupController;
 use App\Controllers\TemplateController;
+use App\Controllers\SearchController;
 use App\Controllers\AdministrativeProcedureController;
 use App\Controllers\LegalConsultancyController;
 use App\Controllers\OfficeStatsController;
@@ -232,6 +233,30 @@ $router->get('/maintenance/diagnostics', [MaintenanceController::class, 'diagnos
 $router->get('/maintenance/migrations', [MaintenanceController::class, 'migrations'], [AuthMiddleware::class]);
 $router->post('/maintenance/migrations/run', [MaintenanceController::class, 'runMigrations'], [AuthMiddleware::class]);
 $router->get('/maintenance/error-logs', [MaintenanceController::class, 'errorLogs'], [AuthMiddleware::class]);
+
+// Busca global (2.14)
+$router->get('/search', [SearchController::class, 'index'], [AuthMiddleware::class]);
+$router->get('/api/search', [SearchController::class, 'api'], [AuthMiddleware::class]);
+$router->get('/api/search/suggest', [SearchController::class, 'suggest'], [AuthMiddleware::class]);
+
+// Templates — complemento (2.2)
+$router->get('/templates/create', [TemplateController::class, 'create'], [AuthMiddleware::class]);
+$router->get('/templates/{id}/edit', [TemplateController::class, 'edit'], [AuthMiddleware::class]);
+$router->get('/templates/{id}/generate-form', [TemplateController::class, 'generateForm'], [AuthMiddleware::class]);
+$router->post('/templates/{id}/update', [TemplateController::class, 'update'], [AuthMiddleware::class]);
+$router->post('/templates/{id}/generate', [TemplateController::class, 'generate'], [AuthMiddleware::class]);
+$router->get('/generated-documents', [TemplateController::class, 'generated'], [AuthMiddleware::class]);
+
+// Timeline do cliente (2.3)
+$router->get('/clients/{id}/timeline', [ClientController::class, 'timeline'], [AuthMiddleware::class]);
+$router->post('/clients/{id}/timeline/store', [ClientController::class, 'storeTimelineEvent'], [AuthMiddleware::class]);
+$router->get('/clients/{id}/notes', [ClientController::class, 'notes'], [AuthMiddleware::class]);
+$router->post('/clients/{id}/notes/store', [ClientController::class, 'storeNote'], [AuthMiddleware::class]);
+
+// Agenda — complemento CRUD (2.4)
+$router->post('/calendar/events/store', [CalendarController::class, 'store'], [AuthMiddleware::class]);
+$router->post('/calendar/events/{id}/update', [CalendarController::class, 'update'], [AuthMiddleware::class]);
+$router->post('/calendar/events/{id}/delete', [CalendarController::class, 'delete'], [AuthMiddleware::class]);
 
 $router->get('/contracts', [OfficeModuleController::class, 'contracts'], [AuthMiddleware::class]);
 $router->get('/contracts/create', [OfficeModuleController::class, 'contractCreate'], [AuthMiddleware::class]);

@@ -170,8 +170,14 @@ $isActive = function(string $path) use ($currentUri): string {
         <a href="/tribunals" class="nav-link <?= $isActive('/tribunals') ?>">
             <i class="fas fa-plug"></i> Tribunais
         </a>
-        <a href="/templates" class="nav-link <?= $isActive('/templates') ?>">
+        <a href="/templates" class="nav-link <?= $isActive('/templates') && !$isActive('/generated-documents') ? 'active' : '' ?>">
             <i class="fas fa-file-alt"></i> Modelos
+        </a>
+        <a href="/generated-documents" class="nav-link <?= $isActive('/generated-documents') ?>">
+            <i class="fas fa-file-medical"></i> Docs Gerados
+        </a>
+        <a href="/search" class="nav-link <?= $isActive('/search') ?>">
+            <i class="fas fa-search"></i> Busca Global
         </a>
 
         <div class="nav-section">Jurídico</div>
@@ -271,6 +277,13 @@ $isActive = function(string $path) use ($currentUri): string {
             </nav>
         </div>
         <div class="d-flex align-items-center gap-3">
+            <form action="/search" method="GET" class="d-none d-md-flex">
+                <div class="input-group input-group-sm">
+                    <input type="text" name="q" class="form-control" placeholder="Buscar..." style="width:200px"
+                           value="<?= htmlspecialchars($_GET['q'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                    <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-search"></i></button>
+                </div>
+            </form>
             <span class="text-muted small d-none d-md-block">
                 <i class="far fa-clock me-1"></i><?= date('d/m/Y H:i') ?>
             </span>
