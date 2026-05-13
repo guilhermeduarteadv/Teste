@@ -4,3 +4,4 @@
 /storage/logo.*
 /logs/*.log
 /vendor/
+.claude/
