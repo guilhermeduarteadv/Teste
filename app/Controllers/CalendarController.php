@@ -43,6 +43,7 @@ class CalendarController extends Controller
                 'hearings'  => 'getHearingsEvents',
                 'deadlines' => 'getDeadlinesEvents',
                 'financial' => 'getFinancialEvents',
+                'manual'    => 'getManualCalendarEvents',
             ] as $source => $method) {
                 try {
                     $events = array_merge($events, $this->{$method}($db, $start, $end));
@@ -66,6 +67,109 @@ class CalendarController extends Controller
             Logger::error('Calendar events failed: ' . $e->getMessage());
             $this->json(['error' => true, 'message' => 'Erro ao carregar eventos do calendário: ' . $e->getMessage()], 500);
         }
+    }
+
+    public function store(): void
+    {
+        $this->validateCsrf();
+        $db     = Database::getInstance();
+        $userId = (int)\Core\Session::get('user_id');
+
+        $title       = trim($this->input('title', ''));
+        $description = trim($this->input('description', ''));
+        $startAt     = $this->input('start_at', '');
+        $endAt       = $this->input('end_at', '') ?: null;
+        $allDay      = $this->input('all_day', '0') === '1' ? 1 : 0;
+        $location    = trim($this->input('location', ''));
+        $eventType   = $this->input('event_type', 'outro');
+        $entityType  = $this->input('entity_type', '') ?: null;
+        $entityId    = (int)$this->input('entity_id', '0') ?: null;
+        $clientId    = (int)$this->input('client_id', '0') ?: null;
+        $caseId      = (int)$this->input('case_id', '0') ?: null;
+        $responsibleId = (int)$this->input('responsible_id', '0') ?: null;
+        $status      = $this->input('status', 'pendente');
+
+        if (!$title || !$startAt) {
+            \Core\Session::flash('error', 'Título e data/hora de início são obrigatórios.');
+            $this->redirect('/calendar');
+        }
+
+        try {
+            $st = $db->prepare(
+                "INSERT INTO calendar_events
+                 (title, description, start_at, end_at, all_day, location, event_type,
+                  entity_type, entity_id, client_id, case_id, responsible_id,
+                  status, created_by, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
+            );
+            $st->execute([
+                $title, $description, $startAt, $endAt, $allDay, $location, $eventType,
+                $entityType, $entityId, $clientId, $caseId, $responsibleId,
+                $status, $userId,
+            ]);
+            \Core\Session::flash('success', 'Evento criado na agenda.');
+        } catch (\Throwable $e) {
+            Logger::error('Calendar store failed: ' . $e->getMessage());
+            \Core\Session::flash('error', 'Erro ao criar evento: ' . $e->getMessage());
+        }
+        $this->redirect('/calendar');
+    }
+
+    public function update(string $id): void
+    {
+        $this->validateCsrf();
+        $db = Database::getInstance();
+
+        $st = $db->prepare("SELECT id FROM calendar_events WHERE id = ? AND deleted_at IS NULL LIMIT 1");
+        $st->execute([(int)$id]);
+        if (!$st->fetch()) {
+            \Core\Session::flash('error', 'Evento não encontrado.');
+            $this->redirect('/calendar');
+        }
+
+        $title       = trim($this->input('title', ''));
+        $description = trim($this->input('description', ''));
+        $startAt     = $this->input('start_at', '');
+        $endAt       = $this->input('end_at', '') ?: null;
+        $allDay      = $this->input('all_day', '0') === '1' ? 1 : 0;
+        $location    = trim($this->input('location', ''));
+        $eventType   = $this->input('event_type', 'outro');
+        $status      = $this->input('status', 'pendente');
+
+        if (!$title || !$startAt) {
+            \Core\Session::flash('error', 'Título e data/hora de início são obrigatórios.');
+            $this->redirect('/calendar');
+        }
+
+        try {
+            $upd = $db->prepare(
+                "UPDATE calendar_events
+                 SET title=?, description=?, start_at=?, end_at=?, all_day=?,
+                     location=?, event_type=?, status=?, updated_at=NOW()
+                 WHERE id=?"
+            );
+            $upd->execute([$title, $description, $startAt, $endAt, $allDay, $location, $eventType, $status, (int)$id]);
+            \Core\Session::flash('success', 'Evento atualizado.');
+        } catch (\Throwable $e) {
+            Logger::error('Calendar update failed: ' . $e->getMessage());
+            \Core\Session::flash('error', 'Erro ao atualizar evento.');
+        }
+        $this->redirect('/calendar');
+    }
+
+    public function delete(string $id): void
+    {
+        $this->validateCsrf();
+        $db = Database::getInstance();
+        try {
+            $st = $db->prepare("UPDATE calendar_events SET deleted_at=NOW() WHERE id=? AND deleted_at IS NULL");
+            $st->execute([(int)$id]);
+            \Core\Session::flash('success', 'Evento removido da agenda.');
+        } catch (\Throwable $e) {
+            Logger::error('Calendar delete failed: ' . $e->getMessage());
+            \Core\Session::flash('error', 'Erro ao remover evento.');
+        }
+        $this->redirect('/calendar');
     }
 
     public function debug(): void
@@ -331,6 +435,87 @@ class CalendarController extends Controller
             ];
         }
         return $events;
+    }
+
+    private function getManualCalendarEvents($db, string $start, string $end): array
+    {
+        if (!$this->tableExists($db, 'calendar_events')) {
+            return [];
+        }
+
+        $colorMap = [
+            'tasks'     => '#4f46e5',
+            'deadline'  => '#dc2626',
+            'hearing'   => '#d97706',
+            'financial' => '#059669',
+            'outro'     => '#0891b2',
+        ];
+
+        try {
+            $sql = "SELECT ce.*, c.name AS client_name
+                    FROM calendar_events ce
+                    LEFT JOIN clients c ON c.id = ce.client_id
+                    WHERE ce.deleted_at IS NULL
+                      AND ce.start_at IS NOT NULL
+                    ORDER BY ce.start_at ASC";
+
+            $rows   = $db->query($sql)->fetchAll();
+            $events = [];
+
+            foreach ($rows as $ev) {
+                $date = $this->normalizeDate(substr((string)($ev['start_at'] ?? ''), 0, 10));
+                if (!$this->dateInRange($date, $start, $end)) {
+                    continue;
+                }
+
+                $color = $colorMap[$ev['event_type'] ?? 'outro'] ?? '#0891b2';
+                $allDay = (bool)($ev['all_day'] ?? false);
+
+                $startVal = (string)($ev['start_at'] ?? '');
+                $endVal   = (string)($ev['end_at'] ?? '');
+
+                if (!$allDay && strlen($startVal) > 10) {
+                    $startVal = str_replace(' ', 'T', $startVal);
+                } else {
+                    $startVal = $date;
+                }
+
+                $endParsed = null;
+                if ($endVal && strlen($endVal) > 0) {
+                    $endParsed = strlen($endVal) > 10 ? str_replace(' ', 'T', $endVal) : $this->normalizeDate($endVal);
+                }
+
+                $clientName = $ev['client_name'] ?? '';
+                $url = null;
+                if (!empty($ev['case_id'])) {
+                    $url = $this->url('/cases/' . $ev['case_id']);
+                } elseif (!empty($ev['client_id'])) {
+                    $url = $this->url('/clients/' . $ev['client_id']);
+                }
+
+                $events[] = [
+                    'id'      => 'cal-' . $ev['id'],
+                    'title'   => $ev['title'] ?? 'Evento',
+                    'start'   => $startVal,
+                    'end'     => $endParsed,
+                    'allDay'  => $allDay,
+                    'color'   => $color,
+                    'url'     => $url,
+                    'extendedProps' => [
+                        'categoria'   => 'Agenda',
+                        'tipo'        => $ev['event_type'] ?? '',
+                        'local'       => $ev['location'] ?? '',
+                        'description' => $ev['description'] ?? '',
+                        'cliente'     => $clientName,
+                        'status'      => $ev['status'] ?? '',
+                    ],
+                ];
+            }
+            return $events;
+        } catch (\Throwable $e) {
+            Logger::error('Calendar manual events failed: ' . $e->getMessage());
+            return [];
+        }
     }
 
     private function normalizeDate($value): string

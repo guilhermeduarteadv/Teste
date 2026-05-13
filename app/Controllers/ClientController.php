@@ -6,8 +6,10 @@ namespace App\Controllers;
 use Core\Controller;
 use Core\Session;
 use Core\Logger;
+use Core\Database;
 use App\Models\Client;
 use App\Services\SystemLogService;
+use App\Services\ClientTimelineService;
 use App\Helpers\SecurityHelper;
 use App\Helpers\ValidationHelper;
 
@@ -233,6 +235,100 @@ class ClientController extends Controller
             'estado'     => $data['uf'] ?? '',
             'complemento' => $data['complemento'] ?? '',
         ]]);
+    }
+
+    public function timeline(string $id): void
+    {
+        $client = $this->model->findById((int)$id);
+        if (!$client) {
+            Session::flash('error', 'Cliente não encontrado.');
+            $this->redirect('/clients');
+        }
+        $service = new ClientTimelineService();
+        $events  = $service->getEvents((int)$id, true);
+        $this->render('clients/timeline', [
+            'pageTitle' => 'Timeline — ' . $client['name'],
+            'client'    => $client,
+            'events'    => $events,
+        ]);
+    }
+
+    public function storeTimelineEvent(string $id): void
+    {
+        $this->validateCsrf();
+        $client = $this->model->findById((int)$id);
+        if (!$client) {
+            Session::flash('error', 'Cliente não encontrado.');
+            $this->redirect('/clients');
+        }
+        $title       = trim($this->input('title', ''));
+        $description = trim($this->input('description', ''));
+        $visible     = (int)($this->input('visible_client', '1') === '1');
+        if (!$title) {
+            Session::flash('error', 'Título do evento obrigatório.');
+            $this->redirect("/clients/{$id}/timeline");
+        }
+        $service = new ClientTimelineService();
+        $service->addEvent((int)$id, $title, $description, 'manual', 0, $visible, (int)Session::get('user_id'));
+        Session::flash('success', 'Evento adicionado à timeline.');
+        $this->redirect("/clients/{$id}/timeline");
+    }
+
+    public function notes(string $id): void
+    {
+        $client = $this->model->findById((int)$id);
+        if (!$client) {
+            Session::flash('error', 'Cliente não encontrado.');
+            $this->redirect('/clients');
+        }
+        $db    = Database::getInstance();
+        $notes = [];
+        try {
+            $st = $db->prepare(
+                "SELECT cn.*, u.name AS author_name
+                 FROM client_notes cn
+                 LEFT JOIN users u ON u.id = cn.created_by
+                 WHERE cn.client_id = ? AND cn.deleted_at IS NULL
+                 ORDER BY cn.created_at DESC"
+            );
+            $st->execute([(int)$id]);
+            $notes = $st->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {}
+
+        $this->render('clients/notes', [
+            'pageTitle' => 'Anotações — ' . $client['name'],
+            'client'    => $client,
+            'notes'     => $notes,
+        ]);
+    }
+
+    public function storeNote(string $id): void
+    {
+        $this->validateCsrf();
+        $client = $this->model->findById((int)$id);
+        if (!$client) {
+            Session::flash('error', 'Cliente não encontrado.');
+            $this->redirect('/clients');
+        }
+        $note       = trim($this->input('note', ''));
+        $visibility = $this->input('visibility', 'internal');
+        if (!$note) {
+            Session::flash('error', 'Anotação não pode estar vazia.');
+            $this->redirect("/clients/{$id}/notes");
+        }
+        $db = Database::getInstance();
+        try {
+            $st = $db->prepare(
+                "INSERT INTO client_notes (client_id, note, visibility, created_by, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, NOW(), NOW())"
+            );
+            $st->execute([(int)$id, $note, $visibility, (int)Session::get('user_id')]);
+        } catch (\Throwable $e) {
+            Session::flash('error', 'Erro ao salvar anotação: ' . $e->getMessage());
+            $this->redirect("/clients/{$id}/notes");
+        }
+        Session::flash('success', 'Anotação salva com sucesso.');
+        $this->redirect("/clients/{$id}/notes");
     }
 
     private function collectFormData(): array
