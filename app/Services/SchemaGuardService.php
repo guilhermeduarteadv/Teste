@@ -1287,6 +1287,13 @@ class SchemaGuardService
         // Coluna status na tabela publications (2.6)
         $this->addColumnIfMissing('publications', 'status', "VARCHAR(30) DEFAULT 'pending'");
 
+        // Garante deleted_at em tabelas que podem ter sido criadas sem ela
+        $this->addColumnIfMissing('checklist_templates', 'deleted_at', "DATETIME NULL");
+        $this->addColumnIfMissing('checklist_templates', 'items_json', "TEXT NULL");
+        $this->addColumnIfMissing('checklist_templates', 'active', "TINYINT(1) DEFAULT 1");
+        $this->addColumnIfMissing('client_requests', 'deleted_at', "DATETIME NULL");
+        $this->addColumnIfMissing('case_checklist_items', 'deleted_at', "DATETIME NULL");
+
         try {
             $this->db->exec("INSERT IGNORE INTO schema_version (version) VALUES ('v41-phase4-parties-repasses-checklists')");
         } catch (\Throwable $e) {}

@@ -96,149 +96,159 @@ const APP_BASE_PATH = window.APP_BASE_PATH || '';
 <?php
 $currentUser = \Core\Session::get('user');
 $currentUri  = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-$isActive = function(string $path) use ($currentUri): string {
-    return strpos($currentUri, $path) === 0 ? 'active' : '';
+$base        = rtrim(defined('APP_BASE_PATH') ? APP_BASE_PATH : '', '/');
+$isActive    = function(string $path) use ($currentUri, $base): string {
+    return strpos($currentUri, $base . $path) === 0 ? 'active' : '';
 };
 ?>
 <!-- Sidebar -->
 <nav id="sidebar">
-    <a href="/dashboard" class="sidebar-brand">
+    <a href="<?= $base ?>/dashboard" class="sidebar-brand">
         <span class="logo-icon"><i class="fas fa-balance-scale"></i></span>
         JurisControl
     </a>
 
     <div class="mt-1">
         <div class="nav-section">Principal</div>
-        <a href="/dashboard" class="nav-link <?= $isActive('/dashboard') ?>">
+        <a href="<?= $base ?>/dashboard" class="nav-link <?= $isActive('/dashboard') ?>">
             <i class="fas fa-tachometer-alt"></i> Dashboard
         </a>
-        <a href="/calendar" class="nav-link <?= $isActive('/calendar') ?>">
+        <a href="<?= $base ?>/calendar" class="nav-link <?= $isActive('/calendar') ?>">
             <i class="fas fa-calendar-alt"></i> Calendário
         </a>
 
         <div class="nav-section">Gestão</div>
-        <a href="/clients" class="nav-link <?= $isActive('/clients') ?>">
+        <a href="<?= $base ?>/clients" class="nav-link <?= $isActive('/clients') ?>">
             <i class="fas fa-users"></i> Clientes
         </a>
-        <a href="/cases" class="nav-link <?= $isActive('/cases') ?>">
+        <a href="<?= $base ?>/cases" class="nav-link <?= $isActive('/cases') ?>">
             <i class="fas fa-gavel"></i> Processos
         </a>
 
-        <a href="/administrative-procedures" class="nav-link <?= $isActive('/administrative-procedures') ?>">
+        <a href="<?= $base ?>/administrative-procedures" class="nav-link <?= $isActive('/administrative-procedures') ?>">
             <i class="fas fa-city"></i> Administrativos
         </a>
-        <a href="/consultancies" class="nav-link <?= $isActive('/consultancies') ?>">
+        <a href="<?= $base ?>/consultancies" class="nav-link <?= $isActive('/consultancies') ?>">
             <i class="fas fa-comments"></i> Consultorias
         </a>
 
-        <a href="/tasks" class="nav-link <?= $isActive('/tasks') ?>">
+        <a href="<?= $base ?>/tasks" class="nav-link <?= $isActive('/tasks') ?>">
             <i class="fas fa-tasks"></i> Tarefas
         </a>
-        <a href="/financial" class="nav-link <?= $isActive('/financial') ?>">
+        <a href="<?= $base ?>/financial" class="nav-link <?= $isActive('/financial') ?>">
             <i class="fas fa-dollar-sign"></i> Financeiro
         </a>
-        <a href="/timesheets" class="nav-link <?= $isActive('/timesheets') ?>">
+        <a href="<?= $base ?>/timesheets" class="nav-link <?= $isActive('/timesheets') ?>">
             <i class="fas fa-stopwatch"></i> Timesheet
         </a>
 
-        <a href="/contracts" class="nav-link <?= $isActive('/contracts') ?>">
+        <a href="<?= $base ?>/contracts" class="nav-link <?= $isActive('/contracts') ?>">
             <i class="fas fa-file-contract"></i> Honorários
         </a>
-        <a href="/payables" class="nav-link <?= $isActive('/payables') ?>">
+        <a href="<?= $base ?>/payables" class="nav-link <?= $isActive('/payables') ?>">
             <i class="fas fa-receipt"></i> Contas a Pagar
         </a>
-        <a href="/dre" class="nav-link <?= $isActive('/dre') ?>">
+        <a href="<?= $base ?>/dre" class="nav-link <?= $isActive('/dre') ?>">
             <i class="fas fa-calculator"></i> DRE
         </a>
-        <a href="/leads" class="nav-link <?= $isActive('/leads') ?>">
+        <a href="<?= $base ?>/leads" class="nav-link <?= $isActive('/leads') ?>">
             <i class="fas fa-user-plus"></i> Leads
         </a>
-        <a href="/checklists" class="nav-link <?= $isActive('/checklists') ?>">
+        <a href="<?= $base ?>/checklists" class="nav-link <?= $isActive('/checklists') ?>">
             <i class="fas fa-clipboard-check"></i> Checklists
         </a>
-        <a href="/client-requests" class="nav-link <?= $isActive('/client-requests') ?>">
+        <a href="<?= $base ?>/client-requests" class="nav-link <?= $isActive('/client-requests') ?>">
             <i class="fas fa-inbox"></i> Pendências Cliente
         </a>
 
-        <a href="/publications" class="nav-link <?= $isActive('/publications') ?>">
+        <a href="<?= $base ?>/publications" class="nav-link <?= $isActive('/publications') ?>">
             <i class="fas fa-newspaper"></i> Publicações
         </a>
-        <a href="/documents" class="nav-link <?= $isActive('/documents') ?>">
+        <a href="<?= $base ?>/documents" class="nav-link <?= $isActive('/documents') ?>">
             <i class="fas fa-folder-open"></i> Documentos
         </a>
 
-        <a href="/tribunals" class="nav-link <?= $isActive('/tribunals') ?>">
+        <a href="<?= $base ?>/tribunals" class="nav-link <?= $isActive('/tribunals') ?>">
             <i class="fas fa-plug"></i> Tribunais
         </a>
-        <a href="/templates" class="nav-link <?= $isActive('/templates') && !$isActive('/generated-documents') ? 'active' : '' ?>">
+        <a href="<?= $base ?>/templates" class="nav-link <?= $isActive('/templates') && !$isActive('/generated-documents') ? 'active' : '' ?>">
             <i class="fas fa-file-alt"></i> Modelos
         </a>
-        <a href="/generated-documents" class="nav-link <?= $isActive('/generated-documents') ?>">
+        <a href="<?= $base ?>/generated-documents" class="nav-link <?= $isActive('/generated-documents') ?>">
             <i class="fas fa-file-medical"></i> Docs Gerados
         </a>
-        <a href="/search" class="nav-link <?= $isActive('/search') ?>">
+        <a href="<?= $base ?>/search" class="nav-link <?= $isActive('/search') ?>">
             <i class="fas fa-search"></i> Busca Global
         </a>
 
         <div class="nav-section">Jurídico</div>
-        <a href="/deadlines" class="nav-link <?= $isActive('/deadlines') ?>">
+        <a href="<?= $base ?>/deadlines" class="nav-link <?= $isActive('/deadlines') ?>">
             <i class="fas fa-hourglass-half"></i> Prazos
         </a>
 
         <div class="nav-section">Conhecimento</div>
-        <a href="/knowledge/jurisprudence" class="nav-link <?= $isActive('/knowledge/jurisprudence') ?>">
+        <a href="<?= $base ?>/knowledge/jurisprudence" class="nav-link <?= $isActive('/knowledge/jurisprudence') ?>">
             <i class="fas fa-book-open"></i> Jurisprudência
         </a>
-        <a href="/knowledge/theses" class="nav-link <?= $isActive('/knowledge/theses') ?>">
+        <a href="<?= $base ?>/knowledge/theses" class="nav-link <?= $isActive('/knowledge/theses') ?>">
             <i class="fas fa-scroll"></i> Teses
         </a>
 
         <div class="nav-section">Análise</div>
-        <a href="/reports" class="nav-link <?= $isActive('/reports') ?>">
+        <a href="<?= $base ?>/reports" class="nav-link <?= $isActive('/reports') ?>">
             <i class="fas fa-chart-bar"></i> Relatórios
         </a>
-        <a href="/stats" class="nav-link <?= $isActive('/stats') ?>">
+        <a href="<?= $base ?>/stats" class="nav-link <?= $isActive('/stats') ?>">
             <i class="fas fa-chart-line"></i> Estatísticas
+        </a>
+        <a href="<?= $base ?>/productivity" class="nav-link <?= $isActive('/productivity') ?>">
+            <i class="fas fa-user-clock"></i> Produtividade
+        </a>
+        <a href="<?= $base ?>/financial/repases" class="nav-link <?= $isActive('/financial/repases') ?>">
+            <i class="fas fa-hand-holding-usd"></i> Repasses
         </a>
 
         <?php if (($currentUser['role'] ?? '') === 'admin'): ?>
         <div class="nav-section">Administração</div>
-        <a href="/admin/users" class="nav-link <?= $isActive('/admin/users') ?>">
+        <a href="<?= $base ?>/admin/users" class="nav-link <?= $isActive('/admin/users') ?>">
             <i class="fas fa-user-shield"></i> Usuários
         </a>
-        <a href="/admin/settings" class="nav-link <?= $isActive('/admin/settings') ?>">
+        <a href="<?= $base ?>/admin/settings" class="nav-link <?= $isActive('/admin/settings') ?>">
             <i class="fas fa-cog"></i> Configurações
         </a>
-        <a href="/admin/tribunals" class="nav-link <?= $isActive('/admin/tribunals') ?>">
+        <a href="<?= $base ?>/admin/tribunals" class="nav-link <?= $isActive('/admin/tribunals') ?>">
             <i class="fas fa-landmark"></i> Tribunais
         </a>
-        <a href="/admin/logs" class="nav-link <?= $isActive('/admin/logs') ?>">
+        <a href="<?= $base ?>/admin/logs" class="nav-link <?= $isActive('/admin/logs') ?>">
             <i class="fas fa-list-alt"></i> Logs
         </a>
-        <a href="/diagnostics" class="nav-link <?= $isActive('/diagnostics') ?>">
+        <a href="<?= $base ?>/diagnostics" class="nav-link <?= $isActive('/diagnostics') ?>">
             <i class="fas fa-stethoscope"></i> Diagnóstico
         </a>
-        <a href="/backups" class="nav-link <?= $isActive('/backups') ?>">
+        <a href="<?= $base ?>/backups" class="nav-link <?= $isActive('/backups') ?>">
             <i class="fas fa-database"></i> Backup
         </a>
 
-        <a href="/admin/system-check" class="nav-link <?= $isActive('/admin/system-check') ?>">
+        <a href="<?= $base ?>/admin/system-check" class="nav-link <?= $isActive('/admin/system-check') ?>">
             <i class="fas fa-shield-alt"></i> Saúde do Sistema
         </a>
-        <a href="/maintenance/diagnostics" class="nav-link <?= $isActive('/maintenance/diagnostics') ?>">
+        <a href="<?= $base ?>/admin/audit" class="nav-link <?= $isActive('/admin/audit') ?>">
+            <i class="fas fa-clipboard-list"></i> Auditoria
+        </a>
+        <a href="<?= $base ?>/maintenance/diagnostics" class="nav-link <?= $isActive('/maintenance/diagnostics') ?>">
             <i class="fas fa-heartbeat"></i> Diagnóstico Avançado
         </a>
-        <a href="/maintenance/migrations" class="nav-link <?= $isActive('/maintenance/migrations') ?>">
+        <a href="<?= $base ?>/maintenance/migrations" class="nav-link <?= $isActive('/maintenance/migrations') ?>">
             <i class="fas fa-code-branch"></i> Atualizações
         </a>
-        <a href="/maintenance/error-logs" class="nav-link <?= $isActive('/maintenance/error-logs') ?>">
+        <a href="<?= $base ?>/maintenance/error-logs" class="nav-link <?= $isActive('/maintenance/error-logs') ?>">
             <i class="fas fa-bug"></i> Logs de Erro
         </a>
 
         <?php endif; ?>
 
         <div class="nav-section">Portal</div>
-        <a href="/portal/login" class="nav-link" target="_blank">
+        <a href="<?= $base ?>/portal/login" class="nav-link" target="_blank">
             <i class="fas fa-external-link-alt"></i> Portal Cliente
         </a>
     </div>
@@ -288,7 +298,7 @@ $isActive = function(string $path) use ($currentUri): string {
                 <i class="far fa-clock me-1"></i><?= date('d/m/Y H:i') ?>
             </span>
             <div class="dropdown">
-                <a href="/notifications" class="btn btn-sm btn-outline-secondary position-relative" title="Notificações">
+                <a href="<?= $base ?>/notifications" class="btn btn-sm btn-outline-secondary position-relative" title="Notificações">
                     <i class="fas fa-bell"></i>
                     <span id="notif-counter" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;font-size:0.6rem;">0</span>
                 </a>
@@ -298,9 +308,9 @@ $isActive = function(string $path) use ($currentUri): string {
                     <i class="fas fa-user me-1"></i><?= htmlspecialchars(explode(' ', $currentUser['name'] ?? 'Usuário')[0], ENT_QUOTES, 'UTF-8') ?>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="/admin/settings"><i class="fas fa-cog me-2"></i>Configurações</a></li>
+                    <li><a class="dropdown-item" href="<?= $base ?>/admin/settings"><i class="fas fa-cog me-2"></i>Configurações</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Sair</a></li>
+                    <li><a class="dropdown-item text-danger" href="<?= $base ?>/logout"><i class="fas fa-sign-out-alt me-2"></i>Sair</a></li>
                 </ul>
             </div>
         </div>

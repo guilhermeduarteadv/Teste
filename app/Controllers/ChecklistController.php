@@ -208,9 +208,18 @@ class ChecklistController extends Controller
 
     private function seedInitialTemplates(): void
     {
-        $count = (int)$this->db->query(
-            "SELECT COUNT(*) FROM checklist_templates WHERE deleted_at IS NULL"
-        )->fetchColumn();
+        try {
+            $count = (int)$this->db->query(
+                "SELECT COUNT(*) FROM checklist_templates WHERE deleted_at IS NULL"
+            )->fetchColumn();
+        } catch (\Throwable $e) {
+            // deleted_at column may not exist yet — use fallback
+            try {
+                $count = (int)$this->db->query("SELECT COUNT(*) FROM checklist_templates")->fetchColumn();
+            } catch (\Throwable $e2) {
+                return;
+            }
+        }
 
         if ($count > 0) {
             return;

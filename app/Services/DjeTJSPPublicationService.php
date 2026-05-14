@@ -28,6 +28,18 @@ class DjeTJSPPublicationService
         $errors = [];
         $attempts = [];
 
+        // Terms to check that the publication actually mentions this OAB/attorney
+        $oabTerms = [
+            $oabNumber,
+            strtoupper($oabUf) . $oabNumber,
+            strtoupper($oabUf) . ' ' . $oabNumber,
+            'OAB/' . strtoupper($oabUf) . ' ' . $oabNumber,
+            'OAB ' . strtoupper($oabUf) . ' ' . $oabNumber,
+        ];
+        if ($queryExtra !== '') {
+            $oabTerms[] = $queryExtra;
+        }
+
         foreach ($queries as $q) {
             $result = $this->searchRemote($q, $dateStart, $dateEnd);
             $attempts[] = $result['attempt'] ?? [];
@@ -36,6 +48,18 @@ class DjeTJSPPublicationService
                 continue;
             }
             foreach ($result['publications'] as $pub) {
+                $texto = strtolower((string)($pub['texto'] ?? ''));
+                // Skip publications that don't mention the OAB in their text
+                $relevant = false;
+                foreach ($oabTerms as $term) {
+                    if (stripos($texto, $term) !== false) {
+                        $relevant = true;
+                        break;
+                    }
+                }
+                if (!$relevant) {
+                    continue;
+                }
                 $key = md5(($pub['numero_cnj'] ?? '') . '|' . ($pub['data_publicacao'] ?? '') . '|' . ($pub['texto'] ?? ''));
                 $all[$key] = $pub;
             }
