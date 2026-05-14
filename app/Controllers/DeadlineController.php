@@ -49,19 +49,33 @@ class DeadlineController extends Controller
 
         $whereStr = implode(' AND ', $where);
 
-        $stmt = $this->db->prepare(
-            "SELECT d.*,
-                    c.numero_cnj, c.assunto AS case_assunto,
-                    u.name AS confirmed_by_name
-             FROM case_deadlines d
-             LEFT JOIN cases c ON c.id = d.case_id
-             LEFT JOIN users u ON u.id = d.checked_by
-             WHERE {$whereStr}
-             ORDER BY d.data_final ASC, d.created_at DESC
-             LIMIT 200"
-        );
-        $stmt->execute($params);
-        $deadlines = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->db->prepare(
+                "SELECT d.*,
+                        c.numero_cnj, c.assunto AS case_assunto,
+                        u.name AS confirmed_by_name
+                 FROM case_deadlines d
+                 LEFT JOIN cases c ON c.id = d.case_id
+                 LEFT JOIN users u ON u.id = d.checked_by
+                 WHERE {$whereStr}
+                 ORDER BY d.data_final ASC, d.created_at DESC
+                 LIMIT 200"
+            );
+            $stmt->execute($params);
+            $deadlines = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            // checked_by column may not exist yet — use simpler query
+            $stmt = $this->db->prepare(
+                "SELECT d.*, c.numero_cnj, c.assunto AS case_assunto
+                 FROM case_deadlines d
+                 LEFT JOIN cases c ON c.id = d.case_id
+                 WHERE {$whereStr}
+                 ORDER BY d.data_final ASC, d.created_at DESC
+                 LIMIT 200"
+            );
+            $stmt->execute($params);
+            $deadlines = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
 
         // Casos para select
         $casesStmt = $this->db->prepare(

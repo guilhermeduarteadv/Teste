@@ -19,9 +19,15 @@ class ChecklistController extends Controller
     public function index(): void
     {
         $this->seedInitialTemplates();
-        $templates = $this->db->query(
-            "SELECT * FROM checklist_templates WHERE deleted_at IS NULL ORDER BY module ASC, name ASC"
-        )->fetchAll(\PDO::FETCH_ASSOC);
+        try {
+            $templates = $this->db->query(
+                "SELECT * FROM checklist_templates WHERE deleted_at IS NULL ORDER BY module ASC, name ASC"
+            )->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            $templates = $this->db->query(
+                "SELECT * FROM checklist_templates ORDER BY module ASC, name ASC"
+            )->fetchAll(\PDO::FETCH_ASSOC);
+        }
 
         $this->render('checklists/index', [
             'pageTitle' => 'Checklists Automáticos',

@@ -222,27 +222,14 @@ $isActive    = function(string $path) use ($currentUri, $base): string {
         <a href="<?= $base ?>/admin/logs" class="nav-link <?= $isActive('/admin/logs') ?>">
             <i class="fas fa-list-alt"></i> Logs
         </a>
-        <a href="<?= $base ?>/diagnostics" class="nav-link <?= $isActive('/diagnostics') ?>">
-            <i class="fas fa-stethoscope"></i> Diagnóstico
-        </a>
         <a href="<?= $base ?>/backups" class="nav-link <?= $isActive('/backups') ?>">
             <i class="fas fa-database"></i> Backup
         </a>
-
         <a href="<?= $base ?>/admin/system-check" class="nav-link <?= $isActive('/admin/system-check') ?>">
             <i class="fas fa-shield-alt"></i> Saúde do Sistema
         </a>
         <a href="<?= $base ?>/admin/audit" class="nav-link <?= $isActive('/admin/audit') ?>">
             <i class="fas fa-clipboard-list"></i> Auditoria
-        </a>
-        <a href="<?= $base ?>/maintenance/diagnostics" class="nav-link <?= $isActive('/maintenance/diagnostics') ?>">
-            <i class="fas fa-heartbeat"></i> Diagnóstico Avançado
-        </a>
-        <a href="<?= $base ?>/maintenance/migrations" class="nav-link <?= $isActive('/maintenance/migrations') ?>">
-            <i class="fas fa-code-branch"></i> Atualizações
-        </a>
-        <a href="<?= $base ?>/maintenance/error-logs" class="nav-link <?= $isActive('/maintenance/error-logs') ?>">
-            <i class="fas fa-bug"></i> Logs de Erro
         </a>
 
         <?php endif; ?>
@@ -287,7 +274,7 @@ $isActive    = function(string $path) use ($currentUri, $base): string {
             </nav>
         </div>
         <div class="d-flex align-items-center gap-3">
-            <form action="/search" method="GET" class="d-none d-md-flex">
+            <form action="<?= $base ?>/search" method="GET" class="d-none d-md-flex">
                 <div class="input-group input-group-sm">
                     <input type="text" name="q" class="form-control" placeholder="Buscar..." style="width:200px"
                            value="<?= htmlspecialchars($_GET['q'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
