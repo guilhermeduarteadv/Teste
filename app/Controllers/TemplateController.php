@@ -172,7 +172,7 @@ class TemplateController extends Controller
             $clients = $db->query("SELECT id, name FROM clients WHERE deleted_at IS NULL ORDER BY name ASC LIMIT 200")->fetchAll(\PDO::FETCH_ASSOC);
         } catch (\Throwable $e) {}
         try {
-            $cases = $db->query("SELECT id, titulo, numero_cnj FROM cases WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 200")->fetchAll(\PDO::FETCH_ASSOC);
+            $cases = $db->query("SELECT id, assunto, numero_cnj FROM cases WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 200")->fetchAll(\PDO::FETCH_ASSOC);
         } catch (\Throwable $e) {}
 
         $this->render('templates/generate', [

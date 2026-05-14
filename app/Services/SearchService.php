@@ -105,16 +105,16 @@ class SearchService
         $like = '%' . $query . '%';
         try {
             $stmt = $this->db->prepare(
-                "SELECT id, numero_cnj, titulo, area FROM cases
+                "SELECT id, numero_cnj, assunto, area FROM cases
                  WHERE deleted_at IS NULL
-                   AND (numero_cnj LIKE ? OR titulo LIKE ? OR area LIKE ? OR parte_contraria LIKE ?)
+                   AND (numero_cnj LIKE ? OR assunto LIKE ? OR area LIKE ? OR parte_contraria_nome LIKE ?)
                  ORDER BY created_at DESC LIMIT " . (int)$limit
             );
             $stmt->execute([$like, $like, $like, $like]);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $out = [];
             foreach ($rows as $r) {
-                $title = $r['titulo'] ?: $r['numero_cnj'] ?: 'Processo #' . $r['id'];
+                $title = $r['assunto'] ?: $r['numero_cnj'] ?: 'Processo #' . $r['id'];
                 $out[] = [
                     'type'       => 'cases',
                     'type_label' => 'Processos',
@@ -176,9 +176,12 @@ class SearchService
         $like = '%' . $query . '%';
         try {
             $stmt = $this->db->prepare(
-                "SELECT id, titulo, nome_arquivo, descricao FROM documents
+                "SELECT id,
+                        COALESCE(title, titulo) AS titulo,
+                        COALESCE(original_name, filename) AS nome_arquivo,
+                        descricao FROM documents
                  WHERE (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')
-                   AND (titulo LIKE ? OR nome_arquivo LIKE ? OR descricao LIKE ?)
+                   AND (COALESCE(title,titulo) LIKE ? OR COALESCE(original_name,filename) LIKE ? OR descricao LIKE ?)
                  ORDER BY id DESC LIMIT " . (int)$limit
             );
             $stmt->execute([$like, $like, $like]);
@@ -243,12 +246,12 @@ class SearchService
         $like = '%' . $query . '%';
         try {
             $stmt = $this->db->prepare(
-                "SELECT id, titulo, conteudo FROM publications
+                "SELECT id, titulo, texto FROM publications
                  WHERE (deleted_at IS NULL OR deleted_at = '0000-00-00 00:00:00')
-                   AND (titulo LIKE ? OR conteudo LIKE ?)
+                   AND (titulo LIKE ? OR texto LIKE ? OR numero_cnj LIKE ?)
                  ORDER BY id DESC LIMIT " . (int)$limit
             );
-            $stmt->execute([$like, $like]);
+            $stmt->execute([$like, $like, $like]);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $out = [];
             foreach ($rows as $r) {
@@ -257,8 +260,8 @@ class SearchService
                     'type_label' => 'Publicações',
                     'id'         => $r['id'],
                     'title'      => $r['titulo'] ?: 'Publicação #' . $r['id'],
-                    'subtitle'   => $r['conteudo'] ? mb_substr(strip_tags($r['conteudo']), 0, 80) : '',
-                    'link'       => '/publications',
+                    'subtitle'   => $r['texto'] ? mb_substr(strip_tags($r['texto']), 0, 80) : '',
+                    'link'       => '/publications/' . $r['id'],
                     'icon'       => 'fas fa-newspaper',
                 ];
             }

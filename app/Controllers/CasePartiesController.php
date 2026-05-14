@@ -11,7 +11,7 @@ class CasePartiesController extends Controller
     public function index(string $caseId): void
     {
         $db = Database::getInstance();
-        $case = $db->prepare("SELECT id, titulo, numero_cnj FROM cases WHERE id = ? AND deleted_at IS NULL");
+        $case = $db->prepare("SELECT id, assunto, numero_cnj FROM cases WHERE id = ? AND deleted_at IS NULL");
         $case->execute([$caseId]);
         $case = $case->fetch();
         if (!$case) {
@@ -23,7 +23,7 @@ class CasePartiesController extends Controller
         );
         $parties->execute([$caseId]);
         $this->render('cases/parties', [
-            'pageTitle' => 'Partes do Processo — ' . $case['titulo'],
+            'pageTitle' => 'Partes do Processo — ' . $case['assunto'],
             'case'      => $case,
             'parties'   => $parties->fetchAll(),
         ]);

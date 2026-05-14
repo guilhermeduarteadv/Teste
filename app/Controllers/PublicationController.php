@@ -26,7 +26,7 @@ class PublicationController extends Controller
     {
         $db = Database::getInstance();
         $pub = $db->prepare(
-            "SELECT p.*, c.numero_cnj as case_cnj, c.titulo as case_titulo
+            "SELECT p.*, c.numero_cnj as case_cnj, c.assunto as case_titulo
              FROM publications p
              LEFT JOIN cases c ON p.case_id = c.id
              WHERE p.id = ? AND p.deleted_at IS NULL"
@@ -38,7 +38,7 @@ class PublicationController extends Controller
             return;
         }
         $cases = $db->query(
-            "SELECT id, numero_cnj, titulo FROM cases WHERE deleted_at IS NULL ORDER BY titulo"
+            "SELECT id, numero_cnj, assunto FROM cases WHERE deleted_at IS NULL ORDER BY assunto"
         )->fetchAll();
         $this->render('publications/show', [
             'pageTitle'   => 'Publicação #' . $id,
@@ -71,16 +71,16 @@ class PublicationController extends Controller
         $titulo = $this->input('titulo', 'Prazo de publicação');
         $dataBase = $this->input('data_base', $publication['data_publicacao'] ?? date('Y-m-d'));
         $dias = max(1, (int)$this->input('dias', 15));
-        $dataPrazo = date('Y-m-d', strtotime($dataBase . ' +' . $dias . ' days'));
+        $dataFinal = date('Y-m-d', strtotime($dataBase . ' +' . $dias . ' days'));
         $st = $db->prepare(
-            "INSERT INTO case_deadlines (case_id, titulo, descricao, data_prazo, status, created_at, updated_at)
-             VALUES (?, ?, ?, ?, 'pending', NOW(), NOW())"
+            "INSERT INTO case_deadlines (case_id, title, descricao, data_final, status, created_at, updated_at)
+             VALUES (?, ?, ?, ?, 'pendente', NOW(), NOW())"
         );
         $st->execute([
             $publication['case_id'],
             $titulo,
             'Prazo criado a partir de publicação #' . $id,
-            $dataPrazo,
+            $dataFinal,
         ]);
         $this->json(['success' => true, 'message' => 'Prazo criado com sucesso.', 'data_prazo' => $dataPrazo]);
     }

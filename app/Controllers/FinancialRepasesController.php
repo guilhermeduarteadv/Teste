@@ -26,7 +26,7 @@ class FinancialRepasesController extends Controller
             $repases = [];
         }
         $clients = $db->query("SELECT id, nome FROM clients WHERE deleted_at IS NULL ORDER BY nome")->fetchAll();
-        $cases   = $db->query("SELECT id, titulo, numero_cnj FROM cases WHERE deleted_at IS NULL ORDER BY titulo")->fetchAll();
+        $cases   = $db->query("SELECT id, assunto, numero_cnj FROM cases WHERE deleted_at IS NULL ORDER BY assunto")->fetchAll();
         $this->render('financial/repases', [
             'pageTitle' => 'Repasses ao Cliente',
             'repases'   => $repases,

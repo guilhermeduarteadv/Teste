@@ -90,7 +90,7 @@
                         <select name="case_id" class="form-select form-select-sm">
                             <option value="">— Nenhum —</option>
                             <?php foreach ($cases as $c): ?>
-                            <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars((string)$c['numero_cnj'] . ' — ' . $c['titulo'], ENT_QUOTES) ?></option>
+                            <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars((string)$c['numero_cnj'] . ' — ' . $c['assunto'], ENT_QUOTES) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>

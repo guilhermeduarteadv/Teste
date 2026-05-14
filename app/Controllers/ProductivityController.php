@@ -117,14 +117,14 @@ class ProductivityController extends Controller
         // Horas por processo
         try {
             $stmt = $this->db->prepare(
-                "SELECT c.numero_cnj, c.titulo,
+                "SELECT c.numero_cnj, c.assunto,
                         COALESCE(SUM(ts.minutos), 0) AS total_minutos
                  FROM timesheets ts
                  LEFT JOIN cases c ON c.id = ts.case_id
                  WHERE ts.deleted_at IS NULL
                    AND ts.data BETWEEN ? AND ?
                    AND ts.case_id IS NOT NULL
-                 GROUP BY ts.case_id, c.numero_cnj, c.titulo
+                 GROUP BY ts.case_id, c.numero_cnj, c.assunto
                  ORDER BY total_minutos DESC
                  LIMIT 20"
             );

@@ -59,7 +59,7 @@
                             <option value="">— Nenhum —</option>
                             <?php foreach ($cases as $c): ?>
                                 <option value="<?= (int)$c['id'] ?>" <?= $c['id'] == $publication['case_id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars((string)$c['numero_cnj'] . ' — ' . $c['titulo'], ENT_QUOTES) ?>
+                                    <?= htmlspecialchars((string)$c['numero_cnj'] . ' — ' . $c['assunto'], ENT_QUOTES) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
